@@ -11,18 +11,27 @@ resources:
   - name: code
     type: git
     source:
-      uri: https://github.com/phpdocker-io/readability-js.git
+      uri: https://github.com/phpdocker-io/readability-js-server.git
       branch: master
 
   - name: master-status
     type: github-status
     source:
-      repository: phpdocker-io/readability-js
+      repository: phpdocker-io/readability-js-server
       branch: master
       access_token: {{github-access-token}}
 
+  # Docker hub
+  - name: container-registry
+    type: docker-image
+    source:
+      email: {{docker-hub-email}}
+      username: {{docker-hub-user}}
+      password: {{docker-hub-password}}
+      repository: phpdockerio/readability-js-server
+
 jobs:
-  - name: analyze-master
+  - name: build-and-publish-master
     public: true
     plan:
       - get: code
@@ -38,6 +47,10 @@ jobs:
 #        on_failure:
 #          put: master-status
 #          params: { state: "failure", commit: "code" }
+
+      - put: container-registry
+        params:
+          build: code
 
       - put: notify-build-success
         resource: master-status
