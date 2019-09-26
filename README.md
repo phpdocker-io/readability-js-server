@@ -19,16 +19,14 @@ you get back a json payload echoing the URL and containing the stripped out cont
 ```
 
 To which you will receive:
-```http request
+```
 HTTP/1.1 200 OK
 X-Powered-By: Express
 Content-Type: application/json; charset=utf-8
-
 {
    "url": "https://en.wikipedia.org/wiki/Firefox",
    "content": "<div id=\"readability-page-1\" class=\"page\"><div id=\"mw-content-text\" lang=\"en\" dir=\"ltr\"><div>\n\n\n\n<table><caption>Firefox</caption><tbody><tr><td colspan=\"2\"><a href=\"/wiki/File:Firefox_Logo,_2017.svg\"><img alt=\"Firefox Logo, 2017.svg\" src=\"//upload.wikimedia.org/wikipedia/commons/thumb/6/67/Firefox [...]"
 }
-
 ```
 
 # How to run
