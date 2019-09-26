@@ -11,6 +11,6 @@ RUN yarn install --prod ; \
     yarn cache clean
 
 COPY pm2.json .
-COPY app.js   .
+COPY src      src
 
 CMD [ "pm2-runtime", "start", "pm2.json" ]
