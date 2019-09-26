@@ -20,6 +20,8 @@ app.post('/', bodyParser, (req, res) => {
       .end
   }
 
+  console.log('Fetching ' + url + '...')
+
   axios
     .get(url)
     .then((response) => {
