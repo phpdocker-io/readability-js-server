@@ -1,3 +1,7 @@
+// Ensure console.log spits out timestamps
+require('log-timestamp')
+
+// Express
 const app        = require('express')()
 const bodyParser = require('body-parser').json()
 const port       = 3000
@@ -7,7 +11,15 @@ const { JSDOM } = require('jsdom')
 
 const readability = require('readability')
 
-app.get('/', (req, res) => res.send('Hello World!'))
+app.get('/', (req, res) => {
+  return res
+    .status(400)
+    .send({
+      'error': 'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}'
+    })
+    .end
+})
+
 app.post('/', bodyParser, (req, res) => {
   const url = req.body.url
 

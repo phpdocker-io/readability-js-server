@@ -10,6 +10,7 @@
     "dompurify": "^2.0.3",
     "express": "^4.17.1",
     "jsdom": "^15.1.1",
+    "log-timestamp": "^0.3.0",
     "readability": "https://github.com/mozilla/readability#60f470c4"
   },
   "scripts": {
