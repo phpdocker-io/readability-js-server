@@ -27,7 +27,8 @@ app.post('/', bodyParser, (req, res) => {
 
       const parsed = new readability(dom.window.document, {}).parse()
 
-      console.log(parsed)
+      console.log('Fetched and parsed ' + url + ' successfully')
+
       return res
         .status(200)
         .send({
