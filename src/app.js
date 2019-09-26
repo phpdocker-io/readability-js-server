@@ -6,10 +6,19 @@ const app        = require('express')()
 const bodyParser = require('body-parser').json()
 const port       = 3000
 
-const axios     = require('axios').default
-const { JSDOM } = require('jsdom')
+// HTTP client
+const axios = require('axios').default
 
-const readability = require('readability')
+// Readability, dom and dom purify
+const { JSDOM }       = require('jsdom')
+const readability     = require('readability')
+const createDOMPurify = require('dompurify')
+const DOMPurify       = createDOMPurify((new JSDOM('')).window)
+
+// Not too happy to allow iframe, but it's the only way to get youtube vids
+const domPurifyOptions = {
+  ADD_TAGS: ['iframe', 'video']
+}
 
 app.get('/', (req, res) => {
   return res
@@ -37,8 +46,7 @@ app.post('/', bodyParser, (req, res) => {
   axios
     .get(url)
     .then((response) => {
-      const dom = new JSDOM(response.data)
-
+      const dom    = new JSDOM(response.data)
       const parsed = new readability(dom.window.document, {}).parse()
 
       console.log('Fetched and parsed ' + url + ' successfully')
@@ -47,7 +55,7 @@ app.post('/', bodyParser, (req, res) => {
         .status(200)
         .send({
           url: url,
-          content: parsed.content
+          content: DOMPurify.sanitize(parsed.content, domPurifyOptions)
         })
         .end()
 
