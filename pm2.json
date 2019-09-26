@@ -1,7 +1,7 @@
 {
   "name": "Readability server",
   "script": "src/app.js",
-  "instances": "2",
+  "instances": "5",
   "env": {
     "NODE_ENV": "development"
   },
