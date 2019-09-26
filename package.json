@@ -1,8 +1,15 @@
 {
   "dependencies": {
-    "express": "^4.17.1"
+    "dompurify": "^2.0.3",
+    "express": "^4.17.1",
+    "jsdom": "^15.1.1",
+    "readability": "https://github.com/mozilla/readability#60f470c4"
   },
   "scripts": {
-    "start": "node app.js"
+    "start": "nodemon app.js"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.1",
+    "nodemon": "^1.19.2"
   }
 }
