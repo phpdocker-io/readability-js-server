@@ -2,12 +2,12 @@ FROM keymetrics/pm2:10-alpine
 
 WORKDIR /application
 
-RUN apk add git --no-cache
-
 COPY package.json .
 COPY yarn.lock    .
 
-RUN yarn install --prod ; \
+RUN apk add git --no-cache ; \
+    yarn install --prod ; \
+    apk del git ; \
     yarn cache clean
 
 COPY pm2.json .
