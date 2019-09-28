@@ -12,5 +12,6 @@ RUN apk add git --no-cache ; \
 
 COPY pm2.json .
 COPY src      src
+COPY release  .
 
 CMD [ "pm2-runtime", "start", "pm2.json" ]

@@ -51,6 +51,7 @@ jobs:
       - put: container-registry
         params:
           build: code
+          tag_file: code/release
 
       - put: notify-build-success
         resource: master-status
