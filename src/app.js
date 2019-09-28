@@ -55,7 +55,8 @@ app.post('/', bodyParser, (req, res) => {
         .status(200)
         .send({
           url: url,
-          content: DOMPurify.sanitize(parsed.content, domPurifyOptions)
+          content: DOMPurify.sanitize(parsed.content, domPurifyOptions),
+          excerpt: parsed.excerpt || ''
         })
         .end()
 
