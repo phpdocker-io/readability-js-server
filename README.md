@@ -39,6 +39,13 @@ Content-Type: application/json; charset=utf-8
 The container image lives at `phpdockerio/readability-js-server`. At the moment, it takes no configuration for anything,
 although this might change if and when the use case arises.
 
+### Versioning
+
+We tag each image as `latest`, `x.x.x`, `x.x` and `x`. Since Semver is in use, you can peg to, say, 
+`phpdockerio/readability-js-server:1` with the confidence that no breaking changes will come to ruin your day. You can
+also peg to `phpdockerio/readability-js-server:1.x` if there's a specific minor version that introduces a new feature
+you need.
+
 ### Example
 You'll probably be using this if you're deploying the service somewhere. Simply run the equivalent to 
 ```bash
