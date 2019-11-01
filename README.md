@@ -1,4 +1,4 @@
-[![Build status](https://ci.auronconsulting.co.uk/api/v1/teams/main/pipelines/readability-js-server/jobs/build-and-publish-master/badge)](https://ci.auronconsulting.co.uk/teams/main/pipelines/kong-certbot-agent-master)
+[![Build status](https://ci.auronconsulting.co.uk/api/v1/teams/main/pipelines/readability-js-server/jobs/build-and-publish-master/badge)](https://ci.auronconsulting.co.uk/teams/main/pipelines/readability-js-server)
 
 # Readability JS server
 
