@@ -5,13 +5,13 @@
   "homepage": "https://github.com/phpdocker-io/readability-js-server",
   "license": "Apache-2.0",
   "dependencies": {
+    "@mozilla/readability": "^0.3.0",
     "axios": "^0.19.0",
     "body-parser": "^1.19.0",
     "dompurify": "^2.0.3",
     "express": "^4.17.1",
     "jsdom": "^15.1.1",
-    "log-timestamp": "^0.3.0",
-    "readability": "https://github.com/mozilla/readability#60f470c4"
+    "log-timestamp": "^0.3.0"
   },
   "scripts": {
     "start": "nodemon src/app.js"

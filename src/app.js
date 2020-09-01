@@ -11,7 +11,7 @@ const axios = require('axios').default
 
 // Readability, dom and dom purify
 const { JSDOM }       = require('jsdom')
-const readability     = require('readability')
+const { Readability } = require('@mozilla/readability')
 const createDOMPurify = require('dompurify')
 const DOMPurify       = createDOMPurify((new JSDOM('')).window)
 
@@ -47,7 +47,7 @@ app.post('/', bodyParser, (req, res) => {
     .get(url)
     .then((response) => {
       const dom    = new JSDOM(response.data)
-      const parsed = new readability(dom.window.document, {}).parse()
+      const parsed = new Readability(dom.window.document).parse()
 
       console.log('Fetched and parsed ' + url + ' successfully')
 
