@@ -1,6 +1,9 @@
-FROM keymetrics/pm2:12-alpine
+FROM node:12-alpine
 
 WORKDIR /application
+
+RUN yarn global add pm2; \
+    yarn cache clean
 
 ARG RUNTIME_USER=readability
 
@@ -15,7 +18,8 @@ USER ${RUNTIME_USER}
 COPY package.json .
 COPY yarn.lock    .
 
-RUN yarn install --prod
+RUN yarn install --prod; \
+    yarn cache clean
 
 COPY pm2.json .
 COPY src      src
