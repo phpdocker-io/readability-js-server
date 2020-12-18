@@ -8,7 +8,7 @@
     "@mozilla/readability": "^0.3.0",
     "axios": "^0.20.0",
     "body-parser": "^1.19.0",
-    "dompurify": "^2.0.3",
+    "dompurify": "^2.0.17",
     "express": "^4.17.1",
     "jsdom": "^15.1.1",
     "log-timestamp": "^0.3.0"
