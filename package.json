@@ -5,7 +5,7 @@
   "homepage": "https://github.com/phpdocker-io/readability-js-server",
   "license": "Apache-2.0",
   "dependencies": {
-    "@mozilla/readability": "^0.3.0",
+    "@mozilla/readability": "^0.4.0",
     "axios": "^0.20.0",
     "body-parser": "^1.19.0",
     "dompurify": "^2.0.3",
