@@ -64,9 +64,9 @@ app.post("/", bodyParser, (req, res) => {
 });
 
 // Start server and dump current server version
-const fs = require('fs');
-const file = fs.readFileSync('./release').toString();
-const versions = file.split(' ');
+const fs = require("fs");
+const file = fs.readFileSync("./release").toString();
+const versions = file.split(" ");
 
 app.listen(port, () =>
   console.log(`Readability.js server v${versions[0]} listening on port ${port}!`)
