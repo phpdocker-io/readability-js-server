@@ -30,9 +30,12 @@ app.post("/", bodyParser, (req, res) => {
   const url = req.body.url;
 
   if (url === undefined || url === "") {
-    return res.status(400).send({
-      error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
-    }).end;
+    return res
+      .status(400)
+      .send({
+        error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
+      })
+      .end();
   }
 
   console.log("Fetching " + url + "...");
@@ -53,24 +56,28 @@ app.post("/", bodyParser, (req, res) => {
       return res
         .status(200)
         .send({
-          url: url,
-          ...parsed
+          url,
+          ...parsed,
         })
         .end();
     })
     .catch((error) => {
-      return res.status(500).send({
-        error: "Some weird error fetching the content",
-        details: error,
-      });
+      return res
+        .status(500)
+        .send({
+          error: "Some weird error fetching the content",
+          details: error,
+        })
+        .end();
     });
 });
 
 // Start server and dump current server version
-const fs = require('fs');
-const file = fs.readFileSync('./release').toString();
-const versions = file.split(' ');
+const version = require("fs")
+  .readFileSync("./release")
+  .toString()
+  .split(" ")[0];
 
 app.listen(port, () =>
-  console.log(`Readability.js server v${versions[0]} listening on port ${port}!`)
+  console.log(`Readability.js server v${version} listening on port ${port}!`)
 );
