@@ -40,8 +40,8 @@ app.post("/", bodyParser, (req, res) => {
   axios
     .get(url)
     .then((response) => {
-      const dom = new JSDOM(response.data);
-      const parsed = new Readability(dom.window.document).parse();
+      const sanitized = DOMPurify.sanitize(response.data, domPurifyOptions);
+      const parsed = new Readability((new JSDOM(sanitized)).window.document).parse();
 
       console.log("Fetched and parsed " + url + " successfully");
 
@@ -49,7 +49,7 @@ app.post("/", bodyParser, (req, res) => {
         .status(200)
         .send({
           url: url,
-          content: DOMPurify.sanitize(parsed.content, domPurifyOptions),
+          content: parsed.content,
           excerpt: parsed.excerpt || "",
         })
         .end();
