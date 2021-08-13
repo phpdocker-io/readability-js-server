@@ -49,8 +49,7 @@ app.post("/", bodyParser, (req, res) => {
         .status(200)
         .send({
           url: url,
-          content: parsed.content,
-          excerpt: parsed.excerpt || "",
+          ...parsed
         })
         .end();
     })
