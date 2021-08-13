@@ -30,9 +30,12 @@ app.post("/", bodyParser, (req, res) => {
   const url = req.body.url;
 
   if (url === undefined || url === "") {
-    return res.status(400).send({
-      error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
-    }).end();
+    return res
+      .status(400)
+      .send({
+        error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
+      })
+      .end();
   }
 
   console.log("Fetching " + url + "...");
@@ -50,16 +53,22 @@ app.post("/", bodyParser, (req, res) => {
 
       console.log("Fetched and parsed " + url + " successfully");
 
-      return res.status(200).send({
-        url,
-        ...parsed
-      }).end();
+      return res
+        .status(200)
+        .send({
+          url,
+          ...parsed,
+        })
+        .end();
     })
     .catch((error) => {
-      return res.status(500).send({
-        error: "Some weird error fetching the content",
-        details: error,
-      }).end();
+      return res
+        .status(500)
+        .send({
+          error: "Some weird error fetching the content",
+          details: error,
+        })
+        .end();
     });
 });
 
