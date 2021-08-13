@@ -44,7 +44,6 @@ app.post("/", bodyParser, (req, res) => {
 
       const dom = new JSDOM(sanitized, {
         url: url,
-        runScripts: "outside-only"
       });
 
       const parsed = new Readability(dom.window.document).parse();
