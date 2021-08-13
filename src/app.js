@@ -50,19 +50,16 @@ app.post("/", bodyParser, (req, res) => {
 
       console.log("Fetched and parsed " + url + " successfully");
 
-      return res
-        .status(200)
-        .send({
-          url: url,
-          ...parsed
-        })
-        .end();
+      return res.status(200).send({
+        url,
+        ...parsed
+      }).end();
     })
     .catch((error) => {
       return res.status(500).send({
         error: "Some weird error fetching the content",
         details: error,
-      });
+      }).end();
     });
 });
 
