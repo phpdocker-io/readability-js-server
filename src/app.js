@@ -32,7 +32,7 @@ app.post("/", bodyParser, (req, res) => {
   if (url === undefined || url === "") {
     return res.status(400).send({
       error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
-    }).end;
+    }).end();
   }
 
   console.log("Fetching " + url + "...");
