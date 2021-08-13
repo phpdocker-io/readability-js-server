@@ -14,6 +14,8 @@ deployed via Docker anywhere.
 There's only one endpoint, which consumes and delivers json. You send in a URL to some page you want content extracted, 
 you get back a json payload echoing the URL and containing the stripped out content.
 
+You'll get back [all properties parsed out by Mozilla's Readability](https://github.com/mozilla/readability#parse).
+
 ```bash
 ~ curl -XPOST http://readability-js-server:3000/ \
     -H "Content-Type: application/json" \
@@ -26,9 +28,14 @@ HTTP/1.1 200 OK
 X-Powered-By: Express
 Content-Type: application/json; charset=utf-8
 {
-   "url": "https://en.wikipedia.org/wiki/Firefox",
-   "content": "<div id=\"readability-page-1\" class=\"page\"><div id=\"mw-content-text\" lang=\"en\" dir=\"ltr\"><div>\n\n\n\n<table><caption>Firefox</caption><tbody><tr><td colspan=\"2\"><a href=\"/wiki/File:Firefox_Logo,_2017.svg\"><img alt=\"Firefox Logo, 2017.svg\" src=\"//upload.wikimedia.org/wikipedia/commons/thumb/6/67/Firefox [...]"
-   "excerpt": "Firefox 65 (Quantum) running on Arch Linux with KDE Plasma 5",
+  "url": "https://en.wikipedia.org/wiki/Firefox",
+  "title": "",
+  "byline": null,
+  "dir": "ltr",
+  "content": "<div id=\"readability-page-1\" class=\"page\"><div dir=\"ltr\" lang=\"en\" id=\"mw-content-text\">\n\n\n<table><caption>Mozilla Firefox</caption><tbody><tr><td colspan=\"2\"><a href=\"/wiki/File:Firefox_logo,_2019.svg\"><img data-file-height=\"80\" data-file-width=\"77\" srcset=\"//upload.wikimedia. [...],
+  "length": 101272,
+  "excerpt": "Firefox 89 on Windows 10 displaying Wikipedia with the default system theme.",
+  "siteName": null
 }
 ```
 

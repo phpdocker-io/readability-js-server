@@ -41,7 +41,12 @@ app.post("/", bodyParser, (req, res) => {
     .get(url)
     .then((response) => {
       const sanitized = DOMPurify.sanitize(response.data, domPurifyOptions);
-      const parsed = new Readability((new JSDOM(sanitized)).window.document).parse();
+
+      const dom = new JSDOM(sanitized, {
+        url: url,
+      });
+
+      const parsed = new Readability(dom.window.document).parse();
 
       console.log("Fetched and parsed " + url + " successfully");
 
@@ -49,8 +54,7 @@ app.post("/", bodyParser, (req, res) => {
         .status(200)
         .send({
           url: url,
-          content: parsed.content,
-          excerpt: parsed.excerpt || "",
+          ...parsed
         })
         .end();
     })
