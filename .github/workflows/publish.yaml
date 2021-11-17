@@ -1,0 +1,50 @@
+name: Docker build & publish
+
+on:
+  push:
+    paths:
+      - 'release'
+    branches:
+      - master
+
+  # Allow workflow to be manually run from the GitHub UI
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    # We only deploy master
+    if: ${{ github.ref == 'refs/heads/master' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Work out tags
+        id: container
+        run: |
+          TAGS=$(cat release | awk '{print "phpdockerio/readability-js-server:latest,phpdockerio/readability-js-server:" $1 ",phpdockerio/readability-js-server:" $2 ",phpdockerio/readability-js-server:" $3}')
+          echo "::set-output name=tags::${TAGS}"
+          echo "Docker tags to build: ${TAGS}"
+
+      - name: Build & push container image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64,linux/arm/v7
+          push: true
+          pull: true
+          tags: "${{ steps.container.outputs.tags }}"
+
