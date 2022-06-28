@@ -20,6 +20,16 @@ const domPurifyOptions = {
   ADD_TAGS: ["iframe", "video"],
 };
 
+function sanitizeAndParseDocument(htmlDocument) {
+  const sanitized = DOMPurify.sanitize(htmlDocument, domPurifyOptions);
+
+  const dom = new JSDOM(sanitized, {
+    url: url,
+  });
+
+  return new Readability(dom.window.document).parse();
+}
+
 app.get("/", (req, res) => {
   return res.status(400).send({
     error: 'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}',
@@ -43,13 +53,7 @@ app.post("/", bodyParser, (req, res) => {
   axios
     .get(url)
     .then((response) => {
-      const sanitized = DOMPurify.sanitize(response.data, domPurifyOptions);
-
-      const dom = new JSDOM(sanitized, {
-        url: url,
-      });
-
-      const parsed = new Readability(dom.window.document).parse();
+      const parsed = sanitizeAndParseDocument(response.data)
 
       console.log("Fetched and parsed " + url + " successfully");
 
