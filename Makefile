@@ -11,7 +11,7 @@ lint-fix:
 	yarn prettier -w src/
 
 build-container:
-	docker build -t readability-js .
+	docker build -t readability-js . --load
 
 run-container:
 	docker run --rm -p3000:3000 readability-js
