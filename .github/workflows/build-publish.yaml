@@ -1,33 +1,29 @@
 name: Docker build & publish
 
 on:
+  pull_request:
   push:
-    paths:
-      - 'release'
-    branches:
-      - master
+    branches: [ master ]
 
   # Allow workflow to be manually run from the GitHub UI
   workflow_dispatch:
 
 jobs:
-  publish-docker-image:
-    # We only deploy master
-    if: ${{ github.ref == 'refs/heads/master' }}
+  docker-image:
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+        uses: docker/setup-qemu-action@v2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v1
+        uses: docker/setup-buildx-action@v2
 
       - name: Login to DockerHub
-        uses: docker/login-action@v1
+        uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
@@ -36,14 +32,21 @@ jobs:
         id: container
         run: |
           TAGS=$(cat release | awk '{print "phpdockerio/readability-js-server:latest,phpdockerio/readability-js-server:" $1 ",phpdockerio/readability-js-server:" $2 ",phpdockerio/readability-js-server:" $3}')
-          echo "::set-output name=tags::${TAGS}"
+          echo "tags=${TAGS}" >> $GITHUB_OUTPUT
           echo "Docker tags to build: ${TAGS}"
 
+      - name: Check if release version has been bumped
+        id: release_file_changed
+        uses: tj-actions/changed-files@v37
+        with:
+          files: |
+            release
+
       - name: Build & push container image
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: true
+          push: ${{ github.ref == 'refs/heads/master' && steps.release_file_changed.outputs.test_any_changed == 'true' }}
           pull: true
           tags: "${{ steps.container.outputs.tags }}"
