@@ -47,6 +47,6 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64,linux/arm/v7
-          push: ${{ github.ref == 'refs/heads/master' && steps.release_file_changed.outputs.test_any_changed == 'true' }}
+          push: ${{ github.ref == 'refs/heads/master' && steps.release_file_changed.outputs.any_changed == 'true' }}
           pull: true
           tags: "${{ steps.container.outputs.tags }}"
