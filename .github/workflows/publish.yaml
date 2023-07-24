@@ -10,8 +10,6 @@ on:
 
 jobs:
   publish-docker-image:
-    # We only deploy master
-    if: ${{ github.ref == 'refs/heads/master' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -41,9 +39,8 @@ jobs:
         id: release_file_changed
         uses: tj-actions/changed-files@v37
         with:
-          files_yaml: |
-            release:
-              - release
+          files: |
+            release
 
       - name: Build & push container image
         uses: docker/build-push-action@v2
