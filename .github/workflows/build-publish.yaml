@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish-docker-image:
+  docker-image:
     runs-on: ubuntu-latest
 
     steps:
