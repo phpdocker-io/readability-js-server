@@ -71,7 +71,4 @@ Once you clone the repo:
 
 # Notes
   * No configuration required. This might change if the need arises.
-  * The app requires `node 10`. There's nothing specific about node 10 we're using, but `yarn.lock` was created
-  with it so some of the dependencies might require it. If you want to run this on say AWS lambda and node 8, it might
-  work if you nuke `yarn.lock` and re-create it with that node version. 
-  * The docker image runs via `pm2` and `node 10` with 5 processes. I might make this configurable if there's demand.
+  * The docker image runs via `pm2` and `node 18` with 5 processes. I might make this configurable if there's demand.

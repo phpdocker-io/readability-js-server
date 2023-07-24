@@ -6,11 +6,11 @@
   "license": "Apache-2.0",
   "dependencies": {
     "@mozilla/readability": "^0.4.0",
-    "axios": "^0.21.1",
+    "axios": "^1.4.0",
     "body-parser": "^1.19.0",
-    "dompurify": "^2.0.3",
+    "dompurify": "^3.0.2",
     "express": "^4.17.1",
-    "jsdom": "^16.7.0",
+    "jsdom": "^22.1.0",
     "log-timestamp": "^0.3.0"
   },
   "scripts": {
