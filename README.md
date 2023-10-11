@@ -78,4 +78,4 @@ Once you clone the repo:
 
 # Notes
   * No configuration required. This might change if the need arises.
-  * The docker image runs via `pm2` and `node 18` with 5 processes. I might make this configurable if there's demand.
+  * The docker image runs via `pm2` and `node 20` with 5 processes.
