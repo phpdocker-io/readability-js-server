@@ -2,7 +2,7 @@ FROM node:20-alpine
 
 WORKDIR /application
 
-RUN yarn global add pm2 --verbose \
+RUN yarn global add pm2 \
     && yarn cache clean
 
 ARG RUNTIME_USER=readability

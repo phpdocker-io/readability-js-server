@@ -46,6 +46,13 @@ Content-Type: application/json; charset=utf-8
 The container image lives at `phpdockerio/readability-js-server`. At the moment, it takes no configuration for anything,
 although this might change if and when the use case arises.
 
+### CPU arch supported
+
+ * `linux/amd64`
+ * `linux/arm64`
+
+If you require `linux/arm/v7` (32 bit), the newest supported version is `1.5.0`.
+
 ### Versioning
 
 We tag each image as `latest`, `x.x.x`, `x.x` and `x`. Since Semver is in use, you can peg to, say, 
