@@ -5,20 +5,20 @@
   "homepage": "https://github.com/phpdocker-io/readability-js-server",
   "license": "Apache-2.0",
   "dependencies": {
-    "@mozilla/readability": "^0.4.0",
-    "axios": "^1.4.0",
+    "@mozilla/readability": "^0.5.0",
+    "axios": "^1.6.3",
     "body-parser": "^1.19.0",
     "dompurify": "^3.0.2",
     "express": "^4.17.1",
-    "jsdom": "^22.1.0",
+    "jsdom": "^23.0.1",
     "log-timestamp": "^0.3.0"
   },
   "scripts": {
     "start": "nodemon src/app.js"
   },
   "devDependencies": {
-    "@types/express": "^4.17.1",
-    "nodemon": "^3.0.1",
-    "prettier": "^3.0.3"
+    "@types/express": "^4.17.21",
+    "nodemon": "^3.0.2",
+    "prettier": "^3.1.1"
   }
 }
