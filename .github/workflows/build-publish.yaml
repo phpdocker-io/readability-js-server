@@ -37,7 +37,7 @@ jobs:
 
       - name: Check if release version has been bumped
         id: release_file_changed
-        uses: tj-actions/changed-files@v44
+        uses: tj-actions/changed-files@v46
         with:
           files: |
             release
