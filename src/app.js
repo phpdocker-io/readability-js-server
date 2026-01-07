@@ -41,7 +41,12 @@ app.post("/", bodyParser, (req, res) => {
   console.log("Fetching " + url + "...");
 
   axios
-    .get(url)
+    .get(url, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0",
+      },
+    })
     .then((response) => {
       const sanitized = DOMPurify.sanitize(response.data, domPurifyOptions);
 
