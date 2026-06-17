@@ -94,8 +94,12 @@ function postJson(server, payload) {
   });
 }
 
-function assertFetchFailureShape(response, expectedCode) {
-  assert.equal(response.body.error, "Some weird error fetching the content");
+function assertFetchFailureShape(
+  response,
+  expectedCode,
+  expectedError = "Some weird error fetching the content",
+) {
+  assert.equal(response.body.error, expectedError);
   assert.equal(typeof response.body.details, "object");
   assert.ok(response.body.details);
   assert.equal(response.body.details.code, expectedCode);
@@ -355,9 +359,14 @@ test("POST / rejects unsupported URL schemes with normalized details", async () 
   const response = await supertest(createTestApp())
     .post("/")
     .send({ url: "ftp://example.com/article" })
-    .expect(500);
+    .expect(400);
 
-  assertFetchFailureShape(response, "FETCH_UNSUPPORTED_PROTOCOL");
+  assertFetchFailureShape(
+    response,
+    "FETCH_UNSUPPORTED_PROTOCOL",
+    messages.INVALID_REQUEST_MESSAGE,
+  );
+  assert.equal(response.body.error, messages.INVALID_REQUEST_MESSAGE);
   assert.equal(response.body.details.protocol, "ftp:");
 });
 
@@ -599,9 +608,14 @@ test("POST / normalizes malformed absolute URLs", async () => {
   const response = await supertest(createTestApp())
     .post("/")
     .send({ url: "not a url" })
-    .expect(500);
+    .expect(400);
 
-  assertFetchFailureShape(response, "FETCH_INVALID_URL");
+  assertFetchFailureShape(
+    response,
+    "FETCH_INVALID_URL",
+    messages.INVALID_REQUEST_MESSAGE,
+  );
+  assert.equal(response.body.error, messages.INVALID_REQUEST_MESSAGE);
   assert.equal(response.body.details.url, "not a url");
 });
 

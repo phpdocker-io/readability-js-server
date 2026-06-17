@@ -408,6 +408,13 @@ function normalizeErrorDetails(error) {
   };
 }
 
+function isInvalidRequestError(error) {
+  return (
+    error instanceof FetchArticleError &&
+    ["FETCH_INVALID_URL", "FETCH_UNSUPPORTED_PROTOCOL"].includes(error.code)
+  );
+}
+
 function createApp(configInput, loggerInput) {
   const config = validateConfig(configInput);
   const logger = loggerInput || createLogger();
@@ -458,8 +465,13 @@ function createApp(configInput, loggerInput) {
     } catch (error) {
       logger.error(`Failed to fetch or parse ${url}`, error);
 
-      res.status(500).send({
-        error: "Some weird error fetching the content",
+      const status = isInvalidRequestError(error) ? 400 : 500;
+
+      res.status(status).send({
+        error:
+          status === 400
+            ? INVALID_REQUEST_MESSAGE
+            : "Some weird error fetching the content",
         details: normalizeErrorDetails(error),
       });
     }
