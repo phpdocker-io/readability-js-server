@@ -141,7 +141,9 @@ pnpm test
 The repo also exposes a memory soak harness:
 
 ```bash
-pnpm memory:soak -- --requests 20 --concurrency 2 --sample-every 10
+make soak
+# or directly:
+node scripts/memory-soak.js --requests 20 --concurrency 2 --sample-every 10
 ```
 
 The soak script launches a local fixture server and the API, then reports `rss`, `heapUsed`, and `external` memory samples. On a 20-request local soak at concurrency 2, the service completed without failures and ended at `rss=252.5MB`, `heapUsed=138.2MB`, and `external=5.5MB`, up from `rss=166.1MB`, `heapUsed=64.4MB`, and `external=4.9MB`.

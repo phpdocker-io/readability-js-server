@@ -13,7 +13,7 @@
 - Start: `pnpm start`
 - Lint: `pnpm lint`
 - Test: `pnpm test`
-- Memory soak: `pnpm memory:soak -- --requests 100 --concurrency 2 --sample-every 10`
+- Memory soak: `make soak` or `node scripts/memory-soak.js --requests 100 --concurrency 2 --sample-every 10`
 - Docker build: `docker build -t readability-js .`
 - Docker run: `docker run --rm -p 3000:3000 readability-js`
 

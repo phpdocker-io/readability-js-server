@@ -26,4 +26,4 @@ SOAK_CONCURRENCY ?= 2
 SOAK_SAMPLE_EVERY ?= 10
 
 soak:
-	pnpm memory:soak -- --requests $(SOAK_REQUESTS) --concurrency $(SOAK_CONCURRENCY) --sample-every $(SOAK_SAMPLE_EVERY)
+	node scripts/memory-soak.js --requests $(SOAK_REQUESTS) --concurrency $(SOAK_CONCURRENCY) --sample-every $(SOAK_SAMPLE_EVERY)
