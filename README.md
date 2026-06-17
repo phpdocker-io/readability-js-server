@@ -13,7 +13,7 @@ At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest 
 - Sanitization: DOMPurify 3
 - Deployment image: `node:24-alpine`
 
-The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint.
+The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint. The Compose example uses that same `/healthz` path for its container healthcheck.
 
 ## API
 
@@ -176,7 +176,7 @@ The image is based on `node:24-alpine`, installs production dependencies only, a
 
 CI on pull requests and pushes to `master` runs lint and tests only. Container publishing happens from the tag-triggered release workflow.
 
-For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml).
+For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml). That example publishes port `3000` and checks `GET /healthz` from inside the container using the `node` runtime that ships in the published image.
 
 ## Security posture
 
