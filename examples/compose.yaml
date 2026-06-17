@@ -3,12 +3,13 @@ services:
     image: phpdockerio/readability-js-server:latest
     ports:
       - "3000:3000"
-    environment:
-      # PORT: 3000
-      # REQUEST_BODY_LIMIT: 16kb
-      # FETCH_TIMEOUT_MS: 10000
-      # FETCH_MAX_BYTES: 5242880
-      # FETCH_MAX_REDIRECTS: 5
-      # BLOCK_PRIVATE_NETWORKS: "true"
-      # READABILITY_MAX_ELEMS: (unset by default)
-      # MAX_CONCURRENT_REQUESTS: 10
+    # Uncomment and set any of the following environment variables to override defaults:
+    # environment:
+    #   PORT: 3000
+    #   REQUEST_BODY_LIMIT: 16kb
+    #   FETCH_TIMEOUT_MS: 10000
+    #   FETCH_MAX_BYTES: 5242880
+    #   FETCH_MAX_REDIRECTS: 5
+    #   BLOCK_PRIVATE_NETWORKS: "true"
+    #   READABILITY_MAX_ELEMS: ""
+    #   MAX_CONCURRENT_REQUESTS: 10
