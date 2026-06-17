@@ -19,8 +19,6 @@
     "memory:soak": "node scripts/memory-soak.js"
   },
   "devDependencies": {
-    "axios": "^1.13.2",
-    "body-parser": "^2.2.2",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.4",
     "supertest": "^7.1.4"
