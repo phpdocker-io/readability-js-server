@@ -14,7 +14,7 @@ turndownService.use(gfm);
 
 turndownService.addRule("iframe", {
   filter: "iframe",
-  replacement(content, node) {
+  replacement(_content, node) {
     const src = node.getAttribute("src");
     if (!src) {
       return "";
@@ -31,7 +31,7 @@ turndownService.addRule("iframe", {
 
 turndownService.addRule("video", {
   filter: "video",
-  replacement(content, node) {
+  replacement(_content, node) {
     const src = node.getAttribute("src");
     if (!src) {
       return "";
