@@ -1,81 +1,201 @@
-[![Build status](https://ci.auronconsulting.co.uk/api/v1/teams/main/pipelines/readability-js-server/jobs/build-and-publish-master/badge)](https://ci.auronconsulting.co.uk/teams/main/pipelines/readability-js-server)
+# Readability JS Server
 
-# Readability JS server
+Readability JS Server is a small HTTP service that fetches a page, sanitizes the HTML, and runs Mozilla Readability to return article-shaped JSON.
 
-Mozilla's Readability.js as a service
+At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest release on npm, so the service stays on that version.
 
-# What
+## Overview
 
-This project packages [Mozilla's Readability JS](https://github.com/mozilla/readability) as an HTTP service that can be 
-deployed via Docker anywhere.
+- Runtime: Node.js 24
+- Package manager: pnpm 11.7.0
+- Web framework: Express 5
+- HTML parsing: jsdom 29
+- Sanitization: DOMPurify 3
+- Deployment image: `node:24-alpine`
 
-# How to query
+The container runs as a non-root user and the service exposes a single `POST /` endpoint.
 
-There's only one endpoint, which consumes and delivers json. You send in a URL to some page you want content extracted, 
-you get back a json payload echoing the URL and containing the stripped out content.
+## API
 
-You'll get back [all properties parsed out by Mozilla's Readability](https://github.com/mozilla/readability#parse).
+### Request
 
-```bash
-~ curl -XPOST http://readability-js-server:3000/ \
-    -H "Content-Type: application/json" \
-    -d'{"url": "https://en.wikipedia.org/wiki/Firefox"}'
+`POST /`
+
+Content-Type:
+
+```http
+application/json
 ```
 
-To which you will receive:
-```
-HTTP/1.1 200 OK
-X-Powered-By: Express
-Content-Type: application/json; charset=utf-8
+Body:
+
+```json
 {
-  "url": "https://en.wikipedia.org/wiki/Firefox",
-  "title": "",
-  "byline": null,
-  "dir": "ltr",
-  "content": "<div id=\"readability-page-1\" class=\"page\"><div dir=\"ltr\" lang=\"en\" id=\"mw-content-text\">\n\n\n<table><caption>Mozilla Firefox</caption><tbody><tr><td colspan=\"2\"><a href=\"/wiki/File:Firefox_logo,_2019.svg\"><img data-file-height=\"80\" data-file-width=\"77\" srcset=\"//upload.wikimedia. [...],
-  "length": 101272,
-  "excerpt": "Firefox 89 on Windows 10 displaying Wikipedia with the default system theme.",
-  "siteName": null
+  "url": "https://example.com/article"
 }
 ```
 
-# How to run
+The `url` field is required. Only absolute `http:` and `https:` URLs are accepted.
+
+### Success response
+
+HTTP 200 returns the requested URL plus the parsed article fields:
+
+```json
+{
+  "url": "https://example.com/article",
+  "title": "Article title",
+  "byline": "Author name",
+  "dir": "ltr",
+  "content": "<article>...</article>",
+  "length": 12345,
+  "excerpt": "Short summary",
+  "siteName": "Site name",
+  "textContent": "Plain text body",
+  "lang": "en",
+  "publishedTime": "2024-01-02T03:04:05Z"
+}
+```
+
+Fields are emitted in the exact response shape defined by the service. Nullable fields may come back as `null`.
+
+### Error response
+
+Client and server errors use a stable JSON envelope:
+
+```json
+{
+  "error": "Some weird error fetching the content",
+  "details": {
+    "code": "FETCH_TIMEOUT",
+    "message": "Fetch request timed out"
+  }
+}
+```
+
+- `400` is used for missing or malformed input.
+- `429` is used when the in-process concurrency gate is full.
+- `500` is used for fetch and parse failures.
+
+The `details` object is machine-readable and may include fields such as `status`, `url`, `cause`, `maxBytes`, or `maxRedirects`.
+
+## Configuration
+
+All configuration is driven by environment variables.
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `PORT` | `3000` | Listen port for the HTTP server. |
+| `REQUEST_BODY_LIMIT` | `16kb` | Maximum JSON request body size. |
+| `FETCH_TIMEOUT_MS` | `10000` | Timeout for upstream fetches. |
+| `FETCH_MAX_BYTES` | `5242880` | Maximum upstream response size in bytes. |
+| `FETCH_MAX_REDIRECTS` | `5` | Maximum redirect hops before failure. |
+| `BLOCK_PRIVATE_NETWORKS` | `true` | Block loopback and private-network targets by default. |
+| `READABILITY_MAX_ELEMS` | unset | Optional Readability parse cap for very large documents. |
+| `MAX_CONCURRENT_REQUESTS` | `10` | Maximum in-flight requests per process before returning `429`. |
+
+Example:
+
+```bash
+PORT=3000 MAX_CONCURRENT_REQUESTS=20 pnpm start
+```
+
+## Local development
+
+Prerequisites:
+
+- Node.js 24
+- pnpm 11.7.0
+
+Install and start:
+
+```bash
+pnpm install --frozen-lockfile
+pnpm start
+```
+
+The server starts on `http://localhost:3000/` by default.
+
+The Makefile mirrors the same workflow:
+
+```bash
+make install
+make start
+```
+
+## Testing
+
+Run the lint and test suites with pnpm:
+
+```bash
+pnpm lint
+pnpm test
+```
+
+The repo also exposes a memory soak harness:
+
+```bash
+pnpm memory:soak -- --requests 20 --concurrency 2 --sample-every 10
+```
+
+The soak script launches a local fixture server and the API, then reports `rss`, `heapUsed`, and `external` memory samples. On a 20-request local soak at concurrency 2, the service completed without failures and ended at `rss=252.5MB`, `heapUsed=138.2MB`, and `external=5.5MB`, up from `rss=166.1MB`, `heapUsed=64.4MB`, and `external=4.9MB`.
+
+The Makefile provides the same checks:
+
+```bash
+make lint
+make lint-fix
+```
 
 ## Docker
 
-The container image lives at `phpdockerio/readability-js-server`. At the moment, it takes no configuration for anything,
-although this might change if and when the use case arises.
+Build and run the container locally:
 
-### CPU arch supported
-
- * `linux/amd64`
- * `linux/arm64`
-
-If you require `linux/arm/v7` (32 bit), the newest supported version is `1.5.0`.
-
-### Versioning
-
-We tag each image as `latest`, `x.x.x`, `x.x` and `x`. Since Semver is in use, you can peg to, say, 
-`phpdockerio/readability-js-server:1` with the confidence that no breaking changes will come to ruin your day. You can
-also peg to `phpdockerio/readability-js-server:1.x` if there's a specific minor version that introduces a new feature
-you need.
-
-### Example
-You'll probably be using this if you're deploying the service somewhere. Simply run the equivalent to 
 ```bash
-~ docker run -p3000:3000 phpdockerio/readability-js-server
-``` 
-
-## Locally
-
-You'll need `node` >= 10 and `yarn`.
-
-Once you clone the repo:
-```bash
-~ yarn install
-~ yarn start
+docker build -t readability-js .
+docker run --rm -p 3000:3000 readability-js
 ```
 
-# Notes
-  * No configuration required. This might change if the need arises.
-  * The docker image runs via `pm2` and `node 20` with 5 processes.
+The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
+
+## Security posture
+
+- Only absolute `http:` and `https:` URLs are accepted.
+- Private-network and loopback targets are blocked by default.
+- Redirects are followed manually and capped.
+- Upstream responses must be HTML.
+- Upstream bodies are capped by byte size and timeout.
+- Article HTML is sanitized with DOMPurify.
+- `iframe` and `video` tags are intentionally allowed, along with a narrow attribute allowlist.
+- jsdom is used with its default disabled external-loading and script-execution behavior during parsing.
+
+This service is still an untrusted content fetcher. Do not relax the defaults without tests that cover the new risk.
+
+## Limits
+
+- Single endpoint only: `POST /`
+- No authentication
+- No cache
+- No persistence
+- No session state
+- No built-in distributed rate limiting
+- Per-process concurrency is capped by `MAX_CONCURRENT_REQUESTS`
+- The response shape is fixed; do not add fields casually
+
+## Memory behavior
+
+The service does not keep article state between requests, but each fetch still allocates DOM and Readability objects while it parses. Short memory soaks show growth in `rss` and `heapUsed` during active work, while `external` stays comparatively flat. That is the signal to watch for leak regressions: sustained growth across longer runs, not a single small sample.
+
+Use the soak harness when you need to check that behavior under repeat load.
+
+## Deployment and scaling
+
+The container listens on `PORT` and is designed to be replicated horizontally. There is no PM2 layer in the current image, so scale by running more container replicas behind a load balancer or orchestrator.
+
+Typical production settings:
+
+- `PORT=3000`
+- `BLOCK_PRIVATE_NETWORKS=true`
+- `MAX_CONCURRENT_REQUESTS` tuned to the CPU and memory budget of one replica
+
+Use more replicas rather than pushing a single process into very high concurrency.
