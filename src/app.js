@@ -53,8 +53,12 @@ function createConcurrencyGate(maxConcurrentRequests) {
 
   return (req, res, next) => {
     if (activeRequests >= maxConcurrentRequests) {
-      res.status(503).send({
+      res.status(429).send({
         error: "Server is busy, try again later",
+        details: {
+          code: "SERVER_OVERLOADED",
+          maxConcurrentRequests,
+        },
       });
       return;
     }
