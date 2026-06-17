@@ -149,3 +149,25 @@ test("toMarkdown converts unknown iframe to generic embedded content link", () =
     /\[Embedded content\]\(https:\/\/embed\.unknown-provider\.com\/widget\/abc\)/,
   );
 });
+
+test("toMarkdown does not classify unrelated hosts by query-string provider names", () => {
+  const result = toMarkdown(
+    '<iframe src="https://evil.example/embed?next=https://www.youtube.com/watch?v=abc123"></iframe>',
+  );
+
+  assert.doesNotMatch(result, /\[Video: YouTube\]/);
+  assert.match(
+    result,
+    /\[Embedded content\]\(https:\/\/evil\.example\/embed\?next=https:\/\/www\.youtube\.com\/watch\?v=abc123\)/,
+  );
+});
+
+test("toMarkdown drops iframe and video URLs with unsupported schemes", () => {
+  const iframeResult = toMarkdown(
+    '<iframe src="javascript:alert(1)"></iframe>',
+  );
+  const videoResult = toMarkdown('<video src="data:text/html,hello"></video>');
+
+  assert.equal(iframeResult, "");
+  assert.equal(videoResult, "");
+});
