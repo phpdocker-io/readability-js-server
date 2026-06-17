@@ -10,6 +10,17 @@ lint:
 lint-fix:
 	pnpm lint:fix
 
+HELM_CHART ?= charts/readability-js-server
+HELM_RELEASE_NAME ?= readability-js-server
+
+helm-lint:
+	helm lint $(HELM_CHART)
+
+helm-template:
+	helm template $(HELM_RELEASE_NAME) $(HELM_CHART)
+
+helm-verify: helm-lint helm-template
+
 build-container:
 	docker build -t readability-js .
 

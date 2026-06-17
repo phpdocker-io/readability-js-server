@@ -140,6 +140,13 @@ pnpm lint
 pnpm test
 ```
 
+Run the Helm chart checks with the Makefile:
+
+```bash
+make helm-lint
+make helm-template
+```
+
 The repo also exposes a memory soak harness:
 
 ```bash
@@ -155,6 +162,7 @@ The Makefile provides the same checks:
 ```bash
 make lint
 make lint-fix
+make helm-verify
 ```
 
 For release tagging there is also:
@@ -174,7 +182,7 @@ docker run --rm -p 3000:3000 readability-js
 
 The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
 
-CI on pull requests and pushes to `master` runs lint and tests only. Container publishing happens from the tag-triggered release workflow.
+CI on pull requests and pushes to `master` runs lint, tests, and Helm chart verification. Container publishing happens from the tag-triggered release workflow.
 
 For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml). That example publishes port `3000` and checks `GET /healthz` from inside the container using the `node` runtime that ships in the published image.
 
