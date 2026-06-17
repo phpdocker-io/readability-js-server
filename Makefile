@@ -1,9 +1,13 @@
 install:
 	pnpm install --frozen-lockfile
 
+test:
+	pnpm test
+
 start:
 	pnpm start
 
+check: lint test helm-verify
 lint:
 	pnpm lint
 
