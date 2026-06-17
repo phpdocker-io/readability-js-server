@@ -74,3 +74,52 @@ test("POST / strips script tags and event handlers even in markdown output", asy
   assert.match(response.body.content, /Safe paragraph text/);
   assert.match(response.body.content, /Clean tail paragraph/);
 });
+
+test("POST / restricts iframe and video src to https scheme", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+<html lang="en">
+  <head><title>Scheme security test</title></head>
+  <body>
+    <article>
+      <h1>Test</h1>
+      <p>Lead.</p>
+      <iframe src="http://example.com/embed"></iframe>
+      <video src="http://example.com/v.mp4"></video>
+      <iframe src="https://player.vimeo.com/video/123"></iframe>
+      <p>Tail.</p>
+    </article>
+  </body>
+</html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({ blockPrivateNetworks: false }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article`, contentFormat: "html" })
+    .expect(200);
+
+  assert.doesNotMatch(
+    response.body.content,
+    /http:\/\/example\.com\/embed/,
+    "http iframe src should be stripped",
+  );
+  assert.doesNotMatch(
+    response.body.content,
+    /http:\/\/example\.com\/v\.mp4/,
+    "http video src should be stripped",
+  );
+  assert.match(
+    response.body.content,
+    /https:\/\/player\.vimeo\.com\/video\/123/,
+    "https iframe src should survive",
+  );
+});

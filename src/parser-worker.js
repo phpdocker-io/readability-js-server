@@ -1,37 +1,46 @@
 "use strict";
 
-const { JSDOM } = require("jsdom");
+const { parseHTML } = require("linkedom");
 const { Readability } = require("@mozilla/readability");
-const createDOMPurify = require("dompurify");
+const sanitizeHtml = require("sanitize-html");
 
 const { toMarkdown } = require("./markdown");
 const { mapArticleResponse } = require("./response");
 
-const maxParses = parseInt(process.env.PARSER_MAX_PARSES || "500", 10);
-let parseCount = 0;
+const { window } = parseHTML("");
+const domParser = new window.DOMParser();
 
-const sharedWindow = new JSDOM("").window;
-const DOMPurify = createDOMPurify(sharedWindow);
-const sharedDOMParser = new sharedWindow.DOMParser();
-
-const domPurifyOptions = {
-  ADD_TAGS: ["iframe", "video"],
-  ADD_ATTR: [
-    "allow",
-    "allowfullscreen",
-    "autoplay",
-    "controls",
-    "frameborder",
-    "loading",
-    "loop",
-    "muted",
-    "playsinline",
-    "poster",
-    "preload",
-    "referrerpolicy",
-    "scrolling",
-  ],
-  RETURN_DOM_FRAGMENT: true,
+const sanitizeHtmlOptions = {
+  allowedTags: false,
+  allowedAttributes: {
+    iframe: [
+      "allow",
+      "allowfullscreen",
+      "frameborder",
+      "loading",
+      "referrerpolicy",
+      "scrolling",
+      "src",
+    ],
+    video: [
+      "autoplay",
+      "controls",
+      "loop",
+      "muted",
+      "playsinline",
+      "poster",
+      "preload",
+      "src",
+    ],
+    a: ["href", "name"],
+    img: ["src", "alt"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  allowedSchemesByTag: {
+    iframe: ["https"],
+    video: ["https"],
+  },
+  disallowedTagsMode: "discard",
 };
 
 function createReadabilityOptions(config) {
@@ -45,10 +54,7 @@ function sanitizeArticleContent(content) {
   if (!content) {
     return null;
   }
-  const fragment = DOMPurify.sanitize(content, domPurifyOptions);
-  const container = fragment.ownerDocument.createElement("div");
-  container.appendChild(fragment);
-  return container.innerHTML;
+  return sanitizeHtml(content, sanitizeHtmlOptions);
 }
 
 function parseArticle(html, url, config, contentFormat) {
@@ -57,12 +63,14 @@ function parseArticle(html, url, config, contentFormat) {
     ? html.replace(/(<head[^>]*>)/i, `$1${baseTag}`)
     : html.replace(/(<html[^>]*>)/i, `$1<head>${baseTag}</head>`);
 
-  const doc = sharedDOMParser.parseFromString(htmlWithBase, "text/html");
+  const doc = domParser.parseFromString(htmlWithBase, "text/html");
 
-  const parsed = new Readability(
-    doc,
-    createReadabilityOptions(config),
-  ).parse();
+  // linkedom omits Document.documentURI; Readability's _fixRelativeUris uses baseURI == documentURI
+  // as the same-document signal. Shim it so '#anchor' links stay relative. The 'about:blank' fallback
+  // is defensive — the base-href injection always runs first, so baseURI is never null in practice.
+  doc.documentURI = doc.baseURI ?? "about:blank";
+
+  const parsed = new Readability(doc, createReadabilityOptions(config)).parse();
 
   const sanitizedContent = sanitizeArticleContent(parsed?.content ?? null);
   const finalContent =
@@ -89,11 +97,6 @@ process.on("message", (msg) => {
       id: msg.id,
       error: { message: error.message, code: error.code },
     });
-  }
-
-  parseCount += 1;
-  if (parseCount >= maxParses) {
-    process.send({ type: "recycle" });
   }
 });
 

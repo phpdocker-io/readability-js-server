@@ -2,16 +2,9 @@ FROM node:24-alpine AS deps
 
 WORKDIR /application
 
-ENV PNPM_HOME="/pnpm"
-ENV PATH="${PNPM_HOME}:${PATH}"
-ENV PNPM_CONFIG_MINIMUM_RELEASE_AGE=0
+COPY package.json package-lock.json ./
 
-RUN corepack enable \
-    && corepack prepare pnpm@11.7.0 --activate
-
-COPY package.json pnpm-lock.yaml ./
-
-RUN pnpm install --frozen-lockfile --prod
+RUN npm ci --omit=dev
 
 FROM node:24-alpine
 

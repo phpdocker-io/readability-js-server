@@ -1,18 +1,21 @@
-install:
-	pnpm install --frozen-lockfile
-
-test:
-	pnpm test
-
-start:
-	pnpm start
+.PHONY: test
 
 check: lint test helm-verify
+
+install:
+	npm ci
+
+test:
+	npm test
+
+start:
+	npm start
+
 lint:
-	pnpm lint
+	npm run lint
 
 lint-fix:
-	pnpm lint:fix
+	npm run lint:fix
 
 HELM_CHART ?= charts/readability-js-server
 HELM_RELEASE_NAME ?= readability-js-server
