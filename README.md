@@ -129,6 +129,8 @@ make install
 make start
 ```
 
+Release versions come from [`package.json`](package.json). To publish a release, bump `version`, commit the change, create a `vX.Y.Z` tag, and push that tag. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
+
 ## Testing
 
 Run the lint and test suites with pnpm:
@@ -155,6 +157,12 @@ make lint
 make lint-fix
 ```
 
+For release tagging there is also:
+
+```bash
+make release-tag VERSION=1.8.0
+```
+
 ## Docker
 
 Build and run the container locally:
@@ -165,6 +173,8 @@ docker run --rm -p 3000:3000 readability-js
 ```
 
 The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
+
+CI on pull requests and pushes to `master` runs lint and tests only. Container publishing happens from the tag-triggered release workflow.
 
 For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml).
 

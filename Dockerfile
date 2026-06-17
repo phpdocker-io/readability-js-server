@@ -27,7 +27,7 @@ RUN adduser -D ${RUNTIME_USER} \
 
 COPY --from=deps /application/node_modules ./node_modules
 COPY src src
-COPY release .
+COPY package.json .
 
 USER ${RUNTIME_USER}
 

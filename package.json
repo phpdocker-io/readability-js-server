@@ -1,5 +1,6 @@
 {
   "name": "readability-js-server",
+  "version": "1.8.0",
   "description": "Mozilla's Readability.js as a service",
   "author": "Luis Pabon @ phpdocker.io",
   "homepage": "https://github.com/phpdocker-io/readability-js-server",

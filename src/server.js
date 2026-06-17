@@ -1,16 +1,10 @@
-const fs = require("node:fs");
-const path = require("node:path");
-
 const { loadConfig } = require("./config");
 const { createLogger } = require("./logger");
 const app = require("./app");
+const { version } = require("../package.json");
 
 const config = loadConfig();
 const logger = createLogger();
-const version = fs
-  .readFileSync(path.join(__dirname, "..", "release"))
-  .toString()
-  .split(" ")[0];
 
 const shutdownTimeoutMs = 10_000;
 const server = app.listen(config.port, () => {
