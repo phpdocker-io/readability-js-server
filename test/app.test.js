@@ -3,7 +3,22 @@ const assert = require("node:assert/strict");
 const http = require("node:http");
 const supertest = require("supertest");
 
-const app = require("../src/app");
+const { DEFAULTS, loadConfig } = require("../src/config");
+const { RESPONSE_FIELDS } = require("../src/response");
+const { createApp, messages } = require("../src/app");
+
+function createTestApp(configOverrides) {
+  return createApp(
+    {
+      ...loadConfig({}),
+      ...configOverrides,
+    },
+    {
+      info() {},
+      error() {},
+    },
+  );
+}
 
 function createFixtureServer(routes) {
   const server = http.createServer((req, res) => {
@@ -43,21 +58,23 @@ function createFixtureServer(routes) {
 }
 
 test("GET / returns guidance for POST JSON", async () => {
-  const response = await supertest(app).get("/").expect(400);
+  const response = await supertest(createTestApp()).get("/").expect(400);
 
   assert.deepEqual(response.body, {
-    error: 'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}',
+    error: messages.INVALID_GET_MESSAGE,
   });
 });
 
 test("POST / rejects missing and empty url values", async () => {
+  const app = createTestApp();
+
   await supertest(app)
     .post("/")
     .send({})
     .expect(400)
     .expect(({ body }) => {
       assert.deepEqual(body, {
-        error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
+        error: messages.INVALID_REQUEST_MESSAGE,
       });
     });
 
@@ -67,19 +84,41 @@ test("POST / rejects missing and empty url values", async () => {
     .expect(400)
     .expect(({ body }) => {
       assert.deepEqual(body, {
-        error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
+        error: messages.INVALID_REQUEST_MESSAGE,
       });
     });
 });
 
-test("POST / returns the current extraction shape for a readable article", async (t) => {
+test("configuration defaults are loaded and validated", () => {
+  assert.deepEqual(loadConfig({}), {
+    port: DEFAULTS.PORT,
+    requestBodyLimit: DEFAULTS.REQUEST_BODY_LIMIT,
+    fetchTimeoutMs: DEFAULTS.FETCH_TIMEOUT_MS,
+    fetchMaxBytes: DEFAULTS.FETCH_MAX_BYTES,
+    fetchMaxRedirects: DEFAULTS.FETCH_MAX_REDIRECTS,
+    blockPrivateNetworks: DEFAULTS.BLOCK_PRIVATE_NETWORKS,
+    readabilityMaxElems: undefined,
+    maxConcurrentRequests: DEFAULTS.MAX_CONCURRENT_REQUESTS,
+  });
+
+  assert.throws(
+    () =>
+      loadConfig({
+        PORT: "70000",
+      }),
+    /PORT must be <= 65535/,
+  );
+});
+
+test("POST / returns only the explicit response fields for a readable article", async (t) => {
   const fixture = await createFixtureServer({
     "/article": (_req, res) => {
       res.setHeader("content-type", "text/html; charset=utf-8");
       res.end(`<!doctype html>
-        <html>
+        <html lang="en">
           <head>
-            <title>Ignored page title</title>
+            <title>Readable headline</title>
+            <meta property="article:published_time" content="2024-01-02T03:04:05Z">
           </head>
           <body>
             <main>
@@ -98,23 +137,28 @@ test("POST / returns the current extraction shape for a readable article", async
     await fixture.close();
   });
 
-  const response = await supertest(app)
+  const response = await supertest(createTestApp())
     .post("/")
     .send({ url: `${fixture.baseUrl}/article` })
     .expect(200);
 
+  assert.deepEqual(Object.keys(response.body), RESPONSE_FIELDS);
   assert.equal(response.body.url, `${fixture.baseUrl}/article`);
-  assert.equal(typeof response.body.title, "string");
-  assert.equal(response.body.title, "");
+  assert.equal(response.body.title, "Readable headline");
   assert.equal(response.body.byline, null);
   assert.equal(response.body.dir, null);
   assert.equal(typeof response.body.content, "string");
-  assert.ok(response.body.content.includes("Readable headline"));
   assert.ok(response.body.content.includes("This is the lead paragraph."));
   assert.equal(typeof response.body.length, "number");
   assert.ok(response.body.length > 0);
   assert.equal(response.body.excerpt, "This is the lead paragraph.");
   assert.equal(response.body.siteName, null);
+  assert.equal(typeof response.body.textContent, "string");
+  assert.ok(
+    response.body.textContent.includes("This is the second paragraph."),
+  );
+  assert.equal(response.body.lang, "en");
+  assert.equal(response.body.publishedTime, "2024-01-02T03:04:05Z");
 });
 
 test("POST / returns the current 500 shape when fetch fails", async (t) => {
@@ -130,7 +174,7 @@ test("POST / returns the current 500 shape when fetch fails", async (t) => {
     await fixture.close();
   });
 
-  const response = await supertest(app)
+  const response = await supertest(createTestApp())
     .post("/")
     .send({ url: `${fixture.baseUrl}/fail` })
     .expect(500);
@@ -138,5 +182,8 @@ test("POST / returns the current 500 shape when fetch fails", async (t) => {
   assert.equal(response.body.error, "Some weird error fetching the content");
   assert.equal(typeof response.body.details, "object");
   assert.ok(response.body.details);
-  assert.match(response.body.details.message, /Request failed with status code 500/);
+  assert.match(
+    response.body.details.message,
+    /Request failed with status code 500/,
+  );
 });

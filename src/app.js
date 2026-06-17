@@ -1,76 +1,141 @@
-// Express
-const app = require("express")();
-const bodyParser = require("body-parser").json();
-
-// HTTP client
+const express = require("express");
 const axios = require("axios").default;
-
-// Readability, dom and dom purify
 const { JSDOM } = require("jsdom");
 const { Readability } = require("@mozilla/readability");
 const createDOMPurify = require("dompurify");
+
+const { loadConfig, validateConfig } = require("./config");
+const { createLogger } = require("./logger");
+const { mapArticleResponse } = require("./response");
+
 const DOMPurify = createDOMPurify(new JSDOM("").window);
 
-// Not too happy to allow iframe, but it's the only way to get youtube vids
+const INVALID_REQUEST_MESSAGE =
+  'Send JSON, like so: {"url": "https://url/to/whatever"}';
+const INVALID_GET_MESSAGE =
+  'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}';
+
 const domPurifyOptions = {
   ADD_TAGS: ["iframe", "video"],
 };
 
-app.get("/", (req, res) => {
-  return res.status(400).send({
-    error: 'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}',
-  }).end;
-});
+function createConcurrencyGate(maxConcurrentRequests) {
+  let activeRequests = 0;
 
-app.post("/", bodyParser, (req, res) => {
-  const url = req.body.url;
+  return (req, res, next) => {
+    if (activeRequests >= maxConcurrentRequests) {
+      res.status(503).send({
+        error: "Server is busy, try again later",
+      });
+      return;
+    }
 
-  if (url === undefined || url === "") {
-    return res
-      .status(400)
-      .send({
-        error: 'Send JSON, like so: {"url": "https://url/to/whatever"}',
-      })
-      .end();
+    activeRequests += 1;
+
+    let released = false;
+    const release = () => {
+      if (released) {
+        return;
+      }
+
+      released = true;
+      activeRequests -= 1;
+    };
+
+    res.on("finish", release);
+    res.on("close", release);
+
+    next();
+  };
+}
+
+function createReadabilityOptions(config) {
+  if (config.readabilityMaxElems === undefined) {
+    return undefined;
   }
 
-  console.log("Fetching " + url + "...");
+  return {
+    maxElemsToParse: config.readabilityMaxElems,
+  };
+}
 
-  axios
-    .get(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0",
-      },
-    })
-    .then((response) => {
-      const sanitized = DOMPurify.sanitize(response.data, domPurifyOptions);
+function fetchArticleHtml(url, config) {
+  return axios.get(url, {
+    timeout: config.fetchTimeoutMs,
+    maxContentLength: config.fetchMaxBytes,
+    maxRedirects: config.fetchMaxRedirects,
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0",
+    },
+  });
+}
 
-      const dom = new JSDOM(sanitized, {
-        url: url,
-      });
+function createApp(configInput, loggerInput) {
+  const config = validateConfig(configInput);
+  const logger = loggerInput || createLogger();
+  const app = express();
 
-      const parsed = new Readability(dom.window.document).parse();
+  app.use(express.json({ limit: config.requestBodyLimit }));
+  app.use(createConcurrencyGate(config.maxConcurrentRequests));
 
-      console.log("Fetched and parsed " + url + " successfully");
-
-      return res
-        .status(200)
-        .send({
-          url,
-          ...parsed,
-        })
-        .end();
-    })
-    .catch((error) => {
-      return res
-        .status(500)
-        .send({
-          error: "Some weird error fetching the content",
-          details: error,
-        })
-        .end();
+  app.get("/", (_req, res) => {
+    res.status(400).send({
+      error: INVALID_GET_MESSAGE,
     });
-});
+  });
 
-module.exports = app;
+  app.post("/", async (req, res) => {
+    const url = req.body?.url;
+
+    if (url === undefined || url === "") {
+      res.status(400).send({
+        error: INVALID_REQUEST_MESSAGE,
+      });
+      return;
+    }
+
+    logger.info(`Fetching ${url}...`);
+
+    try {
+      const response = await fetchArticleHtml(url, config);
+      const dom = new JSDOM(response.data, { url });
+      const parsed = new Readability(
+        dom.window.document,
+        createReadabilityOptions(config),
+      ).parse();
+      const article = parsed
+        ? {
+            ...parsed,
+            content: parsed.content
+              ? DOMPurify.sanitize(parsed.content, domPurifyOptions)
+              : null,
+          }
+        : null;
+
+      logger.info(`Fetched and parsed ${url} successfully`);
+
+      res
+        .status(200)
+        .send(mapArticleResponse(url, article, dom.window.document));
+    } catch (error) {
+      logger.error(`Failed to fetch or parse ${url}`, error);
+
+      res.status(500).send({
+        error: "Some weird error fetching the content",
+        details: {
+          message: error.message,
+        },
+      });
+    }
+  });
+
+  return app;
+}
+
+module.exports = createApp(loadConfig());
+module.exports.createApp = createApp;
+module.exports.messages = {
+  INVALID_GET_MESSAGE,
+  INVALID_REQUEST_MESSAGE,
+};
