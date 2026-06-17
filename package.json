@@ -16,7 +16,7 @@
   },
   "scripts": {
     "start": "nodemon src/server.js",
-    "test": "node --test",
+    "test": "node --test test/*.test.js",
     "lint": "eslint src/ test/ scripts/ && prettier -c src/ test/ scripts/",
     "lint:fix": "eslint --fix src/ test/ scripts/ && prettier --write src/ test/ scripts/",
     "memory:soak": "node scripts/memory-soak.js"
