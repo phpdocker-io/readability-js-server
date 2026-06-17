@@ -82,6 +82,21 @@ function createConcurrencyGate(maxConcurrentRequests) {
   };
 }
 
+function validateRequestContentFormat(rawValue, defaultFormat) {
+  if (rawValue === undefined) {
+    return defaultFormat;
+  }
+
+  const validFormats = ["markdown", "html"];
+  const normalized = String(rawValue).trim().toLowerCase();
+
+  if (!validFormats.includes(normalized)) {
+    throw new Error(`contentFormat must be one of: ${validFormats.join(", ")}`);
+  }
+
+  return normalized;
+}
+
 function createReadabilityOptions(config) {
   if (config.readabilityMaxElems === undefined) {
     return undefined;
@@ -435,6 +450,19 @@ function createApp(configInput, loggerInput) {
     if (url === undefined || url === "") {
       res.status(400).send({
         error: INVALID_REQUEST_MESSAGE,
+      });
+      return;
+    }
+
+    let contentFormat;
+    try {
+      contentFormat = validateRequestContentFormat(
+        req.body?.contentFormat,
+        config.contentFormat,
+      );
+    } catch (error) {
+      res.status(400).send({
+        error: error.message,
       });
       return;
     }
