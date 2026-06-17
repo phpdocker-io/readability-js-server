@@ -158,6 +158,8 @@ docker run --rm -p 3000:3000 readability-js
 
 The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
 
+For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml).
+
 ## Security posture
 
 - Only absolute `http:` and `https:` URLs are accepted.
