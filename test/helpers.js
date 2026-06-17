@@ -21,15 +21,23 @@ function createTestApp(configOverrides) {
 
 function createFixtureServer(routes) {
   const server = http.createServer((req, res) => {
-    const handler = routes[req.url] || routes.default;
+    const routeHandler = Object.hasOwn(routes, req.url)
+      ? routes[req.url]
+      : routes.default;
 
-    if (!handler) {
+    if (routeHandler === undefined) {
       res.statusCode = 404;
       res.end("not found");
       return;
     }
 
-    handler(req, res);
+    if (typeof routeHandler !== "function") {
+      res.statusCode = 500;
+      res.end("invalid route handler");
+      return;
+    }
+
+    routeHandler(req, res);
   });
 
   return new Promise((resolve, reject) => {
