@@ -303,9 +303,8 @@ test("POST / sanitizes returned article content", async (t) => {
   assert.doesNotMatch(response.body.content, /javascript:/i);
   assert.match(
     response.body.content,
-    /<img[^>]*src="https:\/\/cdn\.example\/image\.jpg"/,
+    /!\[\]\(https:\/\/cdn\.example\/image\.jpg\)/,
   );
-  assert.match(response.body.content, /<video controls=""><\/video>/);
 });
 
 test("POST / preserves allowed iframe and video tags in returned content", async (t) => {
@@ -348,11 +347,11 @@ test("POST / preserves allowed iframe and video tags in returned content", async
 
   assert.match(
     response.body.content,
-    /<iframe[^>]*src="https:\/\/www\.youtube\.com\/embed\/abc123"[^>]*allowfullscreen=""><\/iframe>/,
+    /\[Video: YouTube\]\(https:\/\/www\.youtube\.com\/embed\/abc123\)/,
   );
   assert.match(
     response.body.content,
-    /<video controls="" src="https:\/\/cdn\.example\/video\.mp4"><\/video>/,
+    /\[Video\]\(https:\/\/cdn\.example\/video\.mp4\)/,
   );
 });
 

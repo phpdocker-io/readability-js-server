@@ -7,6 +7,7 @@ const createDOMPurify = require("dompurify");
 
 const { loadConfig, validateConfig } = require("./config");
 const { createLogger } = require("./logger");
+const { toMarkdown } = require("./markdown");
 const { mapArticleResponse } = require("./response");
 
 const DOMPurify = createDOMPurify(new JSDOM("").window);
@@ -478,10 +479,15 @@ function createApp(configInput, loggerInput) {
         dom.window.document,
         createReadabilityOptions(config),
       ).parse();
+      const sanitizedContent = sanitizeArticleContent(parsed?.content ?? null);
+      const finalContent =
+        sanitizedContent !== null && contentFormat === "markdown"
+          ? toMarkdown(sanitizedContent)
+          : sanitizedContent;
       const article = parsed
         ? {
             ...parsed,
-            content: sanitizeArticleContent(parsed.content),
+            content: finalContent,
           }
         : null;
 
