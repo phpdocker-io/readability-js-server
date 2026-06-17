@@ -36,6 +36,10 @@ const sanitizeHtmlOptions = {
     img: ["src", "alt"],
   },
   allowedSchemes: ["http", "https", "mailto"],
+  allowedSchemesByTag: {
+    iframe: ["https"],
+    video: ["https"],
+  },
   disallowedTagsMode: "discard",
 };
 
