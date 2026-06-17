@@ -18,6 +18,21 @@ const INVALID_GET_MESSAGE =
 
 const domPurifyOptions = {
   ADD_TAGS: ["iframe", "video"],
+  ADD_ATTR: [
+    "allow",
+    "allowfullscreen",
+    "autoplay",
+    "controls",
+    "frameborder",
+    "loading",
+    "loop",
+    "muted",
+    "playsinline",
+    "poster",
+    "preload",
+    "referrerpolicy",
+    "scrolling",
+  ],
 };
 
 const USER_AGENT =
@@ -71,6 +86,14 @@ function createReadabilityOptions(config) {
   return {
     maxElemsToParse: config.readabilityMaxElems,
   };
+}
+
+function sanitizeArticleContent(content) {
+  if (!content) {
+    return null;
+  }
+
+  return DOMPurify.sanitize(content, domPurifyOptions);
 }
 
 function isPrivateIpv4(address) {
@@ -409,6 +432,8 @@ function createApp(configInput, loggerInput) {
 
     try {
       const response = await fetchArticleHtml(url, config);
+      // Intentionally rely on jsdom defaults so inline scripts and external
+      // resource loading remain disabled during parsing.
       const dom = new JSDOM(response.body, { url: response.finalUrl });
       const parsed = new Readability(
         dom.window.document,
@@ -417,9 +442,7 @@ function createApp(configInput, loggerInput) {
       const article = parsed
         ? {
             ...parsed,
-            content: parsed.content
-              ? DOMPurify.sanitize(parsed.content, domPurifyOptions)
-              : null,
+            content: sanitizeArticleContent(parsed.content),
           }
         : null;
 
@@ -443,6 +466,7 @@ function createApp(configInput, loggerInput) {
 
 module.exports = createApp(loadConfig());
 module.exports.createApp = createApp;
+module.exports.createReadabilityOptions = createReadabilityOptions;
 module.exports.messages = {
   INVALID_GET_MESSAGE,
   INVALID_REQUEST_MESSAGE,

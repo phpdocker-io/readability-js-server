@@ -6,7 +6,7 @@ const supertest = require("supertest");
 
 const { DEFAULTS, loadConfig } = require("../src/config");
 const { RESPONSE_FIELDS } = require("../src/response");
-const { createApp, messages } = require("../src/app");
+const { createApp, createReadabilityOptions, messages } = require("../src/app");
 
 function createTestApp(configOverrides) {
   return createApp(
@@ -119,6 +119,16 @@ test("configuration defaults are loaded and validated", () => {
   );
 });
 
+test("readability options are only applied when configured", () => {
+  assert.equal(
+    createReadabilityOptions({ readabilityMaxElems: undefined }),
+    undefined,
+  );
+  assert.deepEqual(createReadabilityOptions({ readabilityMaxElems: 2500 }), {
+    maxElemsToParse: 2500,
+  });
+});
+
 test("POST / blocks private-network targets by default", async (t) => {
   const fixture = await createFixtureServer({
     "/article": (_req, res) => {
@@ -208,6 +218,101 @@ test("POST / returns only the explicit response fields for a readable article", 
   );
   assert.equal(response.body.lang, "en");
   assert.equal(response.body.publishedTime, "2024-01-02T03:04:05Z");
+});
+
+test("POST / sanitizes returned article content", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head>
+            <title>Unsafe headline</title>
+          </head>
+          <body>
+            <article>
+              <h1>Unsafe headline</h1>
+              <p>Lead paragraph.</p>
+              <img src="https://cdn.example/image.jpg" onerror="alert('xss')">
+              <video controls src="javascript:alert('xss')" onclick="alert('xss')"></video>
+              <script>alert("xss")</script>
+              <p>Tail paragraph.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  assert.doesNotMatch(response.body.content, /<script/i);
+  assert.doesNotMatch(response.body.content, /\sonerror=/i);
+  assert.doesNotMatch(response.body.content, /\sonclick=/i);
+  assert.doesNotMatch(response.body.content, /javascript:/i);
+  assert.match(
+    response.body.content,
+    /<img[^>]*src="https:\/\/cdn\.example\/image\.jpg"/,
+  );
+  assert.match(response.body.content, /<video controls=""><\/video>/);
+});
+
+test("POST / preserves allowed iframe and video tags in returned content", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head>
+            <title>Media headline</title>
+          </head>
+          <body>
+            <article>
+              <h1>Media headline</h1>
+              <p>Lead paragraph.</p>
+              <iframe
+                src="https://www.youtube.com/embed/abc123"
+                allowfullscreen
+              ></iframe>
+              <video controls src="https://cdn.example/video.mp4"></video>
+              <p>Tail paragraph.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  assert.match(
+    response.body.content,
+    /<iframe[^>]*src="https:\/\/www\.youtube\.com\/embed\/abc123"[^>]*allowfullscreen=""><\/iframe>/,
+  );
+  assert.match(
+    response.body.content,
+    /<video controls="" src="https:\/\/cdn\.example\/video\.mp4"><\/video>/,
+  );
 });
 
 test("POST / rejects unsupported URL schemes with normalized details", async () => {
