@@ -11,6 +11,8 @@ on:
 jobs:
   checks:
     runs-on: ubuntu-latest
+    env:
+      PNPM_CONFIG_MINIMUM_RELEASE_AGE: 0
 
     steps:
       - name: Checkout
@@ -27,8 +29,6 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        env:
-          PNPM_CONFIG_MINIMUM_RELEASE_AGE: 0
         run: pnpm install --frozen-lockfile
 
       - name: Lint
