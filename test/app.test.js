@@ -7,6 +7,7 @@ const supertest = require("supertest");
 const { DEFAULTS, loadConfig } = require("../src/config");
 const { RESPONSE_FIELDS } = require("../src/response");
 const { createApp, createReadabilityOptions, messages } = require("../src/app");
+const { toMarkdown } = require("../src/markdown");
 
 function createTestApp(configOverrides) {
   return createApp(
@@ -148,6 +149,7 @@ test("configuration defaults are loaded and validated", () => {
     blockPrivateNetworks: DEFAULTS.BLOCK_PRIVATE_NETWORKS,
     readabilityMaxElems: undefined,
     maxConcurrentRequests: DEFAULTS.MAX_CONCURRENT_REQUESTS,
+    contentFormat: DEFAULTS.CONTENT_FORMAT,
   });
 
   assert.throws(
@@ -302,9 +304,8 @@ test("POST / sanitizes returned article content", async (t) => {
   assert.doesNotMatch(response.body.content, /javascript:/i);
   assert.match(
     response.body.content,
-    /<img[^>]*src="https:\/\/cdn\.example\/image\.jpg"/,
+    /!\[\]\(https:\/\/cdn\.example\/image\.jpg\)/,
   );
-  assert.match(response.body.content, /<video controls=""><\/video>/);
 });
 
 test("POST / preserves allowed iframe and video tags in returned content", async (t) => {
@@ -347,11 +348,11 @@ test("POST / preserves allowed iframe and video tags in returned content", async
 
   assert.match(
     response.body.content,
-    /<iframe[^>]*src="https:\/\/www\.youtube\.com\/embed\/abc123"[^>]*allowfullscreen=""><\/iframe>/,
+    /\[Video: YouTube\]\(https:\/\/www\.youtube\.com\/embed\/abc123\)/,
   );
   assert.match(
     response.body.content,
-    /<video controls="" src="https:\/\/cdn\.example\/video\.mp4"><\/video>/,
+    /\[Video\]\(https:\/\/cdn\.example\/video\.mp4\)/,
   );
 });
 
@@ -617,6 +618,292 @@ test("POST / normalizes malformed absolute URLs", async () => {
   );
   assert.equal(response.body.error, messages.INVALID_REQUEST_MESSAGE);
   assert.equal(response.body.details.url, "not a url");
+});
+
+test("POST / returns markdown content by default", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>Markdown default</title></head>
+          <body>
+            <article>
+              <h1>Markdown default</h1>
+              <p>Default format paragraph.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  // Default format is markdown — content must not contain raw HTML tags
+  assert.doesNotMatch(response.body.content, /<p>/i);
+  assert.doesNotMatch(response.body.content, /<h1>/i);
+  assert.match(response.body.content, /Default format paragraph/);
+});
+
+test("POST / returns HTML content when contentFormat=html is requested", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>HTML format</title></head>
+          <body>
+            <article>
+              <h1>HTML format</h1>
+              <p>HTML paragraph content.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article`, contentFormat: "html" })
+    .expect(200);
+
+  // HTML format — content contains raw HTML tags
+  assert.match(response.body.content, /<p>/i);
+  assert.match(response.body.content, /HTML paragraph content/);
+});
+
+test("POST / returns markdown content when contentFormat=markdown is requested explicitly", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>Explicit markdown</title></head>
+          <body>
+            <article>
+              <h1>Explicit markdown</h1>
+              <p>Explicit markdown paragraph.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article`, contentFormat: "markdown" })
+    .expect(200);
+
+  // Explicit markdown — no raw HTML tags
+  assert.doesNotMatch(response.body.content, /<p>/i);
+  assert.doesNotMatch(response.body.content, /<h1>/i);
+  assert.match(response.body.content, /Explicit markdown paragraph/);
+});
+
+test("POST / rejects invalid contentFormat with a descriptive 400 error", async () => {
+  const response = await supertest(createTestApp())
+    .post("/")
+    .send({ url: "https://example.com/article", contentFormat: "xml" })
+    .expect(400);
+
+  assert.match(response.body.error, /contentFormat must be one of/i);
+  assert.match(response.body.error, /markdown/);
+  assert.match(response.body.error, /html/);
+});
+
+test("POST / converts Vimeo iframe to markdown embed link", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>Vimeo embed</title></head>
+          <body>
+            <article>
+              <h1>Vimeo embed</h1>
+              <p>Watch this video.</p>
+              <iframe src="https://player.vimeo.com/video/123456789" allowfullscreen></iframe>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  assert.match(
+    response.body.content,
+    /\[Video: Vimeo\]\(https:\/\/player\.vimeo\.com\/video\/123456789\)/,
+  );
+});
+
+test("toMarkdown converts unknown iframe to generic embedded content link", () => {
+  const html =
+    '<iframe src="https://embed.unknown-provider.com/widget/abc" allowfullscreen></iframe>';
+  const result = toMarkdown(html);
+
+  assert.match(
+    result,
+    /\[Embedded content\]\(https:\/\/embed\.unknown-provider\.com\/widget\/abc\)/,
+  );
+});
+
+test("POST / converts HTML table to GFM markdown table", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>Table article</title></head>
+          <body>
+            <article>
+              <h1>Table article</h1>
+              <p>See the data below.</p>
+              <table>
+                <thead>
+                  <tr><th>Name</th><th>Score</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Alice</td><td>95</td></tr>
+                  <tr><td>Bob</td><td>87</td></tr>
+                </tbody>
+              </table>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  // GFM table uses pipe syntax
+  assert.match(response.body.content, /\|/);
+  assert.match(response.body.content, /Name/);
+  assert.match(response.body.content, /Score/);
+  assert.match(response.body.content, /Alice/);
+  // Must not contain raw HTML table tags
+  assert.doesNotMatch(response.body.content, /<table/i);
+  assert.doesNotMatch(response.body.content, /<td/i);
+});
+
+test("CONTENT_FORMAT env var changes the server default content format", () => {
+  const { loadConfig, validateConfig } = require("../src/config");
+
+  // Default is markdown
+  assert.equal(loadConfig({}).contentFormat, "markdown");
+
+  // CONTENT_FORMAT=html overrides the default
+  assert.equal(loadConfig({ CONTENT_FORMAT: "html" }).contentFormat, "html");
+
+  // validateConfig also accepts contentFormat directly
+  assert.equal(
+    validateConfig({
+      port: 3000,
+      requestBodyLimit: "16kb",
+      fetchTimeoutMs: 10000,
+      fetchMaxBytes: 5 * 1024 * 1024,
+      fetchMaxRedirects: 5,
+      blockPrivateNetworks: true,
+      maxConcurrentRequests: 10,
+      contentFormat: "html",
+    }).contentFormat,
+    "html",
+  );
+
+  // Invalid CONTENT_FORMAT throws
+  assert.throws(
+    () => loadConfig({ CONTENT_FORMAT: "xml" }),
+    /CONTENT_FORMAT must be one of/,
+  );
+});
+
+test("POST / strips script tags and event handlers even in markdown output", async (t) => {
+  const fixture = await createFixtureServer({
+    "/article": (_req, res) => {
+      res.setHeader("content-type", "text/html; charset=utf-8");
+      res.end(`<!doctype html>
+        <html lang="en">
+          <head><title>Sanitize markdown</title></head>
+          <body>
+            <article>
+              <h1>Sanitize markdown</h1>
+              <p onclick="alert('xss')">Safe paragraph text.</p>
+              <script>alert("xss")</script>
+              <p>Clean tail paragraph.</p>
+            </article>
+          </body>
+        </html>`);
+    },
+  });
+
+  t.after(async () => {
+    await fixture.close();
+  });
+
+  const response = await supertest(
+    createTestApp({
+      blockPrivateNetworks: false,
+    }),
+  )
+    .post("/")
+    .send({ url: `${fixture.baseUrl}/article` })
+    .expect(200);
+
+  // Markdown output — no script tags, no event handlers
+  assert.doesNotMatch(response.body.content, /<script/i);
+  assert.doesNotMatch(response.body.content, /\sonclick=/i);
+  // Content is still present
+  assert.match(response.body.content, /Safe paragraph text/);
+  assert.match(response.body.content, /Clean tail paragraph/);
 });
 
 test("POST / returns a stable overload response when concurrent work exceeds the limit", async (t) => {

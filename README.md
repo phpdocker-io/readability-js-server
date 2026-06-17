@@ -31,11 +31,14 @@ Body:
 
 ```json
 {
-  "url": "https://example.com/article"
+  "url": "https://example.com/article",
+  "contentFormat": "markdown"
 }
 ```
 
 The `url` field is required. Only absolute `http:` and `https:` URLs are accepted.
+
+The `contentFormat` field is optional and controls the format of the `content` response field. Valid values are `"markdown"` (default) or `"html"`. This field overrides the server-wide `CONTENT_FORMAT` environment variable on a per-request basis.
 
 ### Success response
 
@@ -47,7 +50,7 @@ HTTP 200 returns the requested URL plus the parsed article fields:
   "title": "Article title",
   "byline": "Author name",
   "dir": "ltr",
-  "content": "<article>...</article>",
+  "content": "# Article title\n\nAuthor name\n\n...",
   "length": 12345,
   "excerpt": "Short summary",
   "siteName": "Site name",
@@ -56,6 +59,8 @@ HTTP 200 returns the requested URL plus the parsed article fields:
   "publishedTime": "2024-01-02T03:04:05Z"
 }
 ```
+
+The `content` field is formatted as markdown by default. To receive HTML instead, set `contentFormat: "html"` in the request body or the `CONTENT_FORMAT` environment variable to `"html"`.
 
 Fields are emitted in the exact response shape defined by the service. Nullable fields may come back as `null`.
 
@@ -93,6 +98,7 @@ All configuration is driven by environment variables.
 | `BLOCK_PRIVATE_NETWORKS` | `true` | Block loopback and private-network targets by default. |
 | `READABILITY_MAX_ELEMS` | unset | Optional Readability parse cap for very large documents. |
 | `MAX_CONCURRENT_REQUESTS` | `10` | Maximum in-flight requests per process before returning `429`. |
+| `CONTENT_FORMAT` | `"markdown"` | Default content format for the `content` response field. Valid values: `"markdown"` or `"html"`. Can be overridden per-request via the `contentFormat` parameter. |
 
 Example:
 
@@ -183,6 +189,15 @@ This service is still an untrusted content fetcher. Do not relax the defaults wi
 - No built-in distributed rate limiting
 - Per-process concurrency is capped by `MAX_CONCURRENT_REQUESTS`
 - The response shape is fixed; do not add fields casually
+
+## Breaking change: contentFormat default
+
+The `content` response field is now returned as **markdown by default** instead of HTML. Existing consumers that expect HTML must either:
+
+1. Set the `CONTENT_FORMAT=html` environment variable (server-wide default), or
+2. Pass `contentFormat: "html"` in each request
+
+This change makes article content more portable and easier to consume, but requires explicit opt-in to preserve the previous HTML output.
 
 ## Memory behavior
 

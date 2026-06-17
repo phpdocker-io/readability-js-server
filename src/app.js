@@ -7,6 +7,7 @@ const createDOMPurify = require("dompurify");
 
 const { loadConfig, validateConfig } = require("./config");
 const { createLogger } = require("./logger");
+const { toMarkdown } = require("./markdown");
 const { mapArticleResponse } = require("./response");
 
 const DOMPurify = createDOMPurify(new JSDOM("").window);
@@ -80,6 +81,21 @@ function createConcurrencyGate(maxConcurrentRequests) {
 
     next();
   };
+}
+
+function validateRequestContentFormat(rawValue, defaultFormat) {
+  if (rawValue === undefined) {
+    return defaultFormat;
+  }
+
+  const validFormats = ["markdown", "html"];
+  const normalized = String(rawValue).trim().toLowerCase();
+
+  if (!validFormats.includes(normalized)) {
+    throw new Error(`contentFormat must be one of: ${validFormats.join(", ")}`);
+  }
+
+  return normalized;
 }
 
 function createReadabilityOptions(config) {
@@ -439,6 +455,19 @@ function createApp(configInput, loggerInput) {
       return;
     }
 
+    let contentFormat;
+    try {
+      contentFormat = validateRequestContentFormat(
+        req.body?.contentFormat,
+        config.contentFormat,
+      );
+    } catch (error) {
+      res.status(400).send({
+        error: error.message,
+      });
+      return;
+    }
+
     logger.info(`Fetching ${url}...`);
 
     try {
@@ -450,10 +479,15 @@ function createApp(configInput, loggerInput) {
         dom.window.document,
         createReadabilityOptions(config),
       ).parse();
+      const sanitizedContent = sanitizeArticleContent(parsed?.content ?? null);
+      const finalContent =
+        sanitizedContent !== null && contentFormat === "markdown"
+          ? toMarkdown(sanitizedContent)
+          : sanitizedContent;
       const article = parsed
         ? {
             ...parsed,
-            content: sanitizeArticleContent(parsed.content),
+            content: finalContent,
           }
         : null;
 
