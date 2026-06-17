@@ -47,6 +47,10 @@ function formatMegabytes(bytes) {
 }
 
 function snapshotMemory(completed, failures) {
+  if (global.gc) {
+    global.gc();
+  }
+
   const usage = process.memoryUsage();
 
   return {
@@ -55,6 +59,7 @@ function snapshotMemory(completed, failures) {
     rss: usage.rss,
     heapUsed: usage.heapUsed,
     external: usage.external,
+    arrayBuffers: usage.arrayBuffers,
   };
 }
 
@@ -74,6 +79,7 @@ function logSample(sample) {
       `rss=${formatMegabytes(sample.rss)}`,
       `heapUsed=${formatMegabytes(sample.heapUsed)}`,
       `external=${formatMegabytes(sample.external)}`,
+      `arrayBuffers=${formatMegabytes(sample.arrayBuffers)}`,
     ].join(" "),
   );
 }
