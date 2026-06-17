@@ -1,5 +1,6 @@
 const express = require("express");
-const axios = require("axios").default;
+const dns = require("node:dns/promises");
+const net = require("node:net");
 const { JSDOM } = require("jsdom");
 const { Readability } = require("@mozilla/readability");
 const createDOMPurify = require("dompurify");
@@ -18,6 +19,19 @@ const INVALID_GET_MESSAGE =
 const domPurifyOptions = {
   ADD_TAGS: ["iframe", "video"],
 };
+
+const USER_AGENT =
+  "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0";
+const HTML_CONTENT_TYPES = new Set(["text/html", "application/xhtml+xml"]);
+
+class FetchArticleError extends Error {
+  constructor(code, message, details = {}) {
+    super(message);
+    this.name = "FetchArticleError";
+    this.code = code;
+    this.details = details;
+  }
+}
 
 function createConcurrencyGate(maxConcurrentRequests) {
   let activeRequests = 0;
@@ -59,16 +73,312 @@ function createReadabilityOptions(config) {
   };
 }
 
-function fetchArticleHtml(url, config) {
-  return axios.get(url, {
-    timeout: config.fetchTimeoutMs,
-    maxContentLength: config.fetchMaxBytes,
-    maxRedirects: config.fetchMaxRedirects,
-    headers: {
-      "User-Agent":
-        "Mozilla/5.0 (X11; Linux x86_64; rv:136.0) Gecko/20100101 Firefox/136.0",
+function isPrivateIpv4(address) {
+  const parts = address.split(".").map((part) => Number.parseInt(part, 10));
+
+  if (parts.length !== 4 || parts.some(Number.isNaN)) {
+    return false;
+  }
+
+  const [first, second] = parts;
+
+  return (
+    first === 10 ||
+    first === 127 ||
+    (first === 169 && second === 254) ||
+    (first === 172 && second >= 16 && second <= 31) ||
+    (first === 192 && second === 168)
+  );
+}
+
+function isPrivateIpv6(address) {
+  const normalized = address.toLowerCase();
+
+  if (normalized === "::1") {
+    return true;
+  }
+
+  if (normalized.startsWith("fe80:")) {
+    return true;
+  }
+
+  if (normalized.startsWith("fc") || normalized.startsWith("fd")) {
+    return true;
+  }
+
+  if (normalized.startsWith("::ffff:")) {
+    return isPrivateIpv4(normalized.slice("::ffff:".length));
+  }
+
+  return false;
+}
+
+function isPrivateIp(address) {
+  const family = net.isIP(address);
+
+  if (family === 4) {
+    return isPrivateIpv4(address);
+  }
+
+  if (family === 6) {
+    return isPrivateIpv6(address);
+  }
+
+  return false;
+}
+
+async function assertAllowedUrl(rawUrl, config) {
+  let parsedUrl;
+
+  try {
+    parsedUrl = new URL(rawUrl);
+  } catch (_error) {
+    throw new FetchArticleError(
+      "FETCH_INVALID_URL",
+      "URL must be a valid absolute URL",
+      { url: rawUrl },
+    );
+  }
+
+  if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+    throw new FetchArticleError(
+      "FETCH_UNSUPPORTED_PROTOCOL",
+      "Only http and https URLs are supported",
+      {
+        protocol: parsedUrl.protocol,
+        url: parsedUrl.toString(),
+      },
+    );
+  }
+
+  if (!config.blockPrivateNetworks) {
+    return parsedUrl;
+  }
+
+  const hostname = parsedUrl.hostname;
+
+  if (net.isIP(hostname)) {
+    if (isPrivateIp(hostname)) {
+      throw new FetchArticleError(
+        "FETCH_PRIVATE_NETWORK_BLOCKED",
+        "Requests to private or loopback addresses are blocked",
+        {
+          address: hostname,
+          hostname,
+          url: parsedUrl.toString(),
+        },
+      );
+    }
+
+    return parsedUrl;
+  }
+
+  let addresses;
+
+  try {
+    addresses = await dns.lookup(hostname, {
+      all: true,
+      verbatim: true,
+    });
+  } catch (error) {
+    throw new FetchArticleError(
+      "FETCH_DNS_ERROR",
+      `Failed to resolve hostname ${hostname}`,
+      {
+        hostname,
+        cause: error.code || error.name,
+      },
+    );
+  }
+
+  const blockedAddress = addresses.find(({ address }) => isPrivateIp(address));
+
+  if (blockedAddress) {
+    throw new FetchArticleError(
+      "FETCH_PRIVATE_NETWORK_BLOCKED",
+      "Requests to private or loopback addresses are blocked",
+      {
+        address: blockedAddress.address,
+        family: blockedAddress.family,
+        hostname,
+        url: parsedUrl.toString(),
+      },
+    );
+  }
+
+  return parsedUrl;
+}
+
+function validateContentType(response) {
+  const contentTypeHeader = response.headers.get("content-type");
+  const mediaType = contentTypeHeader
+    ? contentTypeHeader.split(";")[0].trim().toLowerCase()
+    : "";
+
+  if (HTML_CONTENT_TYPES.has(mediaType)) {
+    return;
+  }
+
+  throw new FetchArticleError(
+    "FETCH_NON_HTML_RESPONSE",
+    "Fetched response must be HTML content",
+    {
+      contentType: contentTypeHeader || null,
+      status: response.status,
+      url: response.url,
     },
+  );
+}
+
+async function readBodyWithLimit(response, maxBytes) {
+  const contentLengthHeader = response.headers.get("content-length");
+
+  if (contentLengthHeader) {
+    const contentLength = Number.parseInt(contentLengthHeader, 10);
+
+    if (Number.isInteger(contentLength) && contentLength > maxBytes) {
+      throw new FetchArticleError(
+        "FETCH_RESPONSE_TOO_LARGE",
+        `Fetched response exceeded byte limit of ${maxBytes}`,
+        {
+          contentLength,
+          maxBytes,
+          url: response.url,
+        },
+      );
+    }
+  }
+
+  if (!response.body) {
+    return "";
+  }
+
+  const reader = response.body.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+
+    if (done) {
+      break;
+    }
+
+    totalBytes += value.byteLength;
+
+    if (totalBytes > maxBytes) {
+      await reader.cancel("response exceeded configured byte limit");
+
+      throw new FetchArticleError(
+        "FETCH_RESPONSE_TOO_LARGE",
+        `Fetched response exceeded byte limit of ${maxBytes}`,
+        {
+          bytesRead: totalBytes,
+          maxBytes,
+          url: response.url,
+        },
+      );
+    }
+
+    chunks.push(Buffer.from(value));
+  }
+
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function normalizeFetchError(error) {
+  if (error instanceof FetchArticleError) {
+    return error;
+  }
+
+  if (error?.name === "TimeoutError" || error?.name === "AbortError") {
+    return new FetchArticleError("FETCH_TIMEOUT", "Fetch request timed out");
+  }
+
+  return new FetchArticleError("FETCH_NETWORK_ERROR", "Fetch request failed", {
+    cause: error?.code || error?.name || "UNKNOWN",
   });
+}
+
+async function fetchArticleHtml(url, config) {
+  let currentUrl = await assertAllowedUrl(url, config);
+
+  for (let redirectCount = 0; ; redirectCount += 1) {
+    let response;
+
+    try {
+      response = await fetch(currentUrl, {
+        headers: {
+          "User-Agent": USER_AGENT,
+        },
+        redirect: "manual",
+        signal: AbortSignal.timeout(config.fetchTimeoutMs),
+      });
+    } catch (error) {
+      throw normalizeFetchError(error);
+    }
+
+    if (response.status >= 300 && response.status < 400) {
+      if (redirectCount >= config.fetchMaxRedirects) {
+        throw new FetchArticleError(
+          "FETCH_REDIRECT_LIMIT_EXCEEDED",
+          `Fetch exceeded redirect limit of ${config.fetchMaxRedirects}`,
+          {
+            maxRedirects: config.fetchMaxRedirects,
+            status: response.status,
+            url: currentUrl.toString(),
+          },
+        );
+      }
+
+      const location = response.headers.get("location");
+
+      if (!location) {
+        throw new FetchArticleError(
+          "FETCH_REDIRECT_WITHOUT_LOCATION",
+          "Redirect response did not include a Location header",
+          {
+            status: response.status,
+            url: currentUrl.toString(),
+          },
+        );
+      }
+
+      currentUrl = await assertAllowedUrl(
+        new URL(location, currentUrl).toString(),
+        config,
+      );
+      continue;
+    }
+
+    if (!response.ok) {
+      throw new FetchArticleError(
+        "FETCH_HTTP_ERROR",
+        `Fetch failed with status code ${response.status}`,
+        {
+          status: response.status,
+          url: currentUrl.toString(),
+        },
+      );
+    }
+
+    validateContentType(response);
+
+    return {
+      body: await readBodyWithLimit(response, config.fetchMaxBytes),
+      finalUrl: response.url || currentUrl.toString(),
+    };
+  }
+}
+
+function normalizeErrorDetails(error) {
+  const normalizedError = normalizeFetchError(error);
+
+  return {
+    code: normalizedError.code,
+    message: normalizedError.message,
+    ...normalizedError.details,
+  };
 }
 
 function createApp(configInput, loggerInput) {
@@ -99,7 +409,7 @@ function createApp(configInput, loggerInput) {
 
     try {
       const response = await fetchArticleHtml(url, config);
-      const dom = new JSDOM(response.data, { url });
+      const dom = new JSDOM(response.body, { url: response.finalUrl });
       const parsed = new Readability(
         dom.window.document,
         createReadabilityOptions(config),
@@ -123,9 +433,7 @@ function createApp(configInput, loggerInput) {
 
       res.status(500).send({
         error: "Some weird error fetching the content",
-        details: {
-          message: error.message,
-        },
+        details: normalizeErrorDetails(error),
       });
     }
   });
