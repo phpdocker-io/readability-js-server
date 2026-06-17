@@ -1,16 +1,24 @@
 const { loadConfig } = require("./config");
-const { createLogger } = require("./logger");
 const app = require("./app");
 const { version } = require("../package.json");
 
 const config = loadConfig();
-const logger = createLogger();
+
+function log(message) {
+  console.log(`[${new Date().toISOString()}] ${message}`);
+}
+
+function logError(message, error) {
+  if (error) {
+    console.error(`[${new Date().toISOString()}] ${message}`, error);
+  } else {
+    console.error(`[${new Date().toISOString()}] ${message}`);
+  }
+}
 
 const shutdownTimeoutMs = 10_000;
 const server = app.listen(config.port, () => {
-  logger.info(
-    `Readability.js server v${version} listening on port ${config.port}!`,
-  );
+  log(`Readability.js server v${version} listening on port ${config.port}!`);
 });
 
 let isShuttingDown = false;
@@ -23,7 +31,7 @@ function closeServer(signal) {
   isShuttingDown = true;
   process.exitCode = 0;
 
-  logger.info(
+  log(
     `Received ${signal}, starting graceful shutdown with a ${shutdownTimeoutMs}ms timeout...`,
   );
 
@@ -32,7 +40,7 @@ function closeServer(signal) {
   }
 
   const forceCloseTimer = setTimeout(() => {
-    logger.info(
+    log(
       `Graceful shutdown timed out after ${shutdownTimeoutMs}ms, closing remaining connections...`,
     );
 
@@ -47,11 +55,11 @@ function closeServer(signal) {
     clearTimeout(forceCloseTimer);
 
     if (error) {
-      logger.error("HTTP server shutdown failed", error);
+      logError("HTTP server shutdown failed", error);
       return;
     }
 
-    logger.info("HTTP server closed cleanly, exiting.");
+    log("HTTP server closed cleanly, exiting.");
     process.exitCode = 0;
   });
 }
