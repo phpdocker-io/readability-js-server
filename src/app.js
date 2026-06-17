@@ -124,13 +124,13 @@ function createApp(configInput, logger) {
   const config = validateConfig(configInput);
   const log = logger || {
     info(msg) {
-      console.log(`[${new Date().toISOString()}] ${msg}`);
+      console.log("[%s] %s", new Date().toISOString(), msg);
     },
     error(msg, err) {
       if (err) {
-        console.error(`[${new Date().toISOString()}] ${msg}`, err);
+        console.error("[%s] %s", new Date().toISOString(), msg, err);
       } else {
-        console.error(`[${new Date().toISOString()}] ${msg}`);
+        console.error("[%s] %s", new Date().toISOString(), msg);
       }
     },
   };
