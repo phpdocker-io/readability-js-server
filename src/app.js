@@ -1,39 +1,14 @@
 const express = require("express");
-const { JSDOM } = require("jsdom");
-const { Readability } = require("@mozilla/readability");
-const createDOMPurify = require("dompurify");
 
 const { loadConfig, validateConfig } = require("./config");
 const { normalizeFetchError } = require("./errors");
 const { fetchArticleHtml } = require("./fetcher");
-const { toMarkdown } = require("./markdown");
-const { mapArticleResponse } = require("./response");
-
-const DOMPurify = createDOMPurify(new JSDOM("").window);
+const { createParserPool } = require("./parser");
 
 const INVALID_REQUEST_MESSAGE =
   'Send JSON, like so: {"url": "https://url/to/whatever"}';
 const INVALID_GET_MESSAGE =
   'POST (not GET) JSON, like so: {"url": "https://url/to/whatever"}';
-
-const domPurifyOptions = {
-  ADD_TAGS: ["iframe", "video"],
-  ADD_ATTR: [
-    "allow",
-    "allowfullscreen",
-    "autoplay",
-    "controls",
-    "frameborder",
-    "loading",
-    "loop",
-    "muted",
-    "playsinline",
-    "poster",
-    "preload",
-    "referrerpolicy",
-    "scrolling",
-  ],
-};
 
 function createConcurrencyGate(maxConcurrentRequests) {
   let activeRequests = 0;
@@ -94,32 +69,6 @@ function createReadabilityOptions(config) {
   };
 }
 
-function sanitizeArticleContent(content) {
-  if (!content) {
-    return null;
-  }
-
-  return DOMPurify.sanitize(content, domPurifyOptions);
-}
-
-function parseArticle(html, url, config, contentFormat) {
-  const dom = new JSDOM(html, { url });
-  const parsed = new Readability(
-    dom.window.document,
-    createReadabilityOptions(config),
-  ).parse();
-
-  const sanitizedContent = sanitizeArticleContent(parsed?.content ?? null);
-  const finalContent =
-    sanitizedContent !== null && contentFormat === "markdown"
-      ? toMarkdown(sanitizedContent)
-      : sanitizedContent;
-
-  const article = parsed ? { ...parsed, content: finalContent } : null;
-
-  return mapArticleResponse(url, article, dom.window.document);
-}
-
 function createApp(configInput, logger) {
   const config = validateConfig(configInput);
   const log = logger || {
@@ -135,6 +84,7 @@ function createApp(configInput, logger) {
     },
   };
 
+  const parser = createParserPool();
   const app = express();
 
   app.get("/healthz", (_req, res) => {
@@ -171,7 +121,7 @@ function createApp(configInput, logger) {
 
     try {
       const response = await fetchArticleHtml(url, config);
-      const article = parseArticle(
+      const article = await parser.parse(
         response.body,
         response.finalUrl,
         config,
