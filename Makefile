@@ -1,14 +1,14 @@
 install:
-	yarn install
+	pnpm install --frozen-lockfile
 
 start:
-	yarn start
+	pnpm start
 
 lint:
-	yarn prettier -c src/
+	pnpm lint
 
 lint-fix:
-	yarn prettier -w src/
+	pnpm lint:fix
 
 build-container:
 	docker build -t readability-js . --load

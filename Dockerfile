@@ -2,8 +2,11 @@ FROM node:24-alpine
 
 WORKDIR /application
 
-RUN yarn global add pm2 \
-    && yarn cache clean
+ENV PNPM_HOME="/pnpm"
+ENV PATH="${PNPM_HOME}:${PATH}"
+
+RUN corepack enable \
+    && corepack prepare pnpm@11.7.0 --activate
 
 ARG RUNTIME_USER=readability
 
@@ -16,13 +19,12 @@ RUN mkdir -p /home/${RUNTIME_USER} \
 USER ${RUNTIME_USER}
 
 COPY package.json .
-COPY yarn.lock    .
+COPY pnpm-lock.yaml .
 
-RUN yarn install --prod \
-    && yarn cache clean
+RUN pnpm install --frozen-lockfile
 
 COPY pm2.json .
 COPY src      src
 COPY release  .
 
-CMD [ "pm2-runtime", "start", "pm2.json" ]
+CMD [ "node", "src/server.js" ]
