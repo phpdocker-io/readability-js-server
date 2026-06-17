@@ -4,21 +4,23 @@
   "author": "Luis Pabon @ phpdocker.io",
   "homepage": "https://github.com/phpdocker-io/readability-js-server",
   "license": "Apache-2.0",
+  "packageManager": "pnpm@11.7.0",
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
-    "axios": "^1.13.5",
-    "body-parser": "^2.2.2",
-    "dompurify": "^3.3.1",
+    "dompurify": "^3.4.11",
     "express": "^5.2.1",
-    "jsdom": "^27.4.0",
-    "log-timestamp": "^0.3.0"
+    "jsdom": "^29.1.1"
   },
   "scripts": {
-    "start": "nodemon src/app.js"
+    "start": "nodemon src/server.js",
+    "test": "node --test",
+    "lint": "prettier -c src/ test/ scripts/",
+    "lint:fix": "prettier -w src/ test/ scripts/",
+    "memory:soak": "node scripts/memory-soak.js"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
-    "nodemon": "^3.1.11",
-    "prettier": "^3.7.4"
+    "nodemon": "^3.1.14",
+    "prettier": "^3.8.4",
+    "supertest": "^7.1.4"
   }
 }

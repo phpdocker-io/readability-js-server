@@ -1,17 +1,17 @@
 install:
-	yarn install
+	pnpm install --frozen-lockfile
 
 start:
-	yarn start
+	pnpm start
 
 lint:
-	yarn prettier -c src/
+	pnpm lint
 
 lint-fix:
-	yarn prettier -w src/
+	pnpm lint:fix
 
 build-container:
-	docker build -t readability-js . --load
+	docker build -t readability-js .
 
 run-container:
 	docker run --rm -p3000:3000 readability-js
