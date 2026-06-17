@@ -1,3 +1,7 @@
+.PHONY: test
+
+check: lint test helm-verify
+
 install:
 	npm ci
 
@@ -7,7 +11,6 @@ test:
 start:
 	npm start
 
-check: lint test helm-verify
 lint:
 	npm run lint
 
