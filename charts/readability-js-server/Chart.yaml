@@ -2,9 +2,26 @@ apiVersion: v2
 name: readability-js-server
 description: A production-usable Helm chart for Readability JS Server
 type: application
-version: 0.1.0
+version: 0.1.1
 appVersion: "1.8.0"
 home: https://github.com/phpdocker-io/readability-js-server
+annotations:
+  artifacthub.io/license: Apache-2.0
+  artifacthub.io/links: |
+    - name: source
+      url: https://github.com/phpdocker-io/readability-js-server
+    - name: support
+      url: https://github.com/phpdocker-io/readability-js-server/issues
+    - name: chart repository
+      url: https://phpdocker-io.github.io/readability-js-server
+  artifacthub.io/maintainers: |
+    - name: Luis Pabon
+      email: luis.pabon@auronconsulting.co.uk
+  artifacthub.io/changes: |
+    - kind: added
+      description: Publish chart packages and index.yaml to the GitHub Pages Helm repository.
+    - kind: added
+      description: Add Artifact Hub repository metadata and installation guidance for the hosted chart repository.
 sources:
   - https://github.com/phpdocker-io/readability-js-server
 keywords:
@@ -14,4 +31,5 @@ keywords:
   - nodejs
 maintainers:
   - name: Luis Pabon
+    email: luis.pabon@auronconsulting.co.uk
     url: https://github.com/luispabon

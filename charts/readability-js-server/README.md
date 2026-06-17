@@ -9,7 +9,17 @@ This chart deploys Readability JS Server as a single-replica `Deployment` behind
 
 ## Installation
 
-Install from the repository checkout:
+Add the published Helm repository and install the chart:
+
+```bash
+helm repo add phpdocker-io https://phpdocker-io.github.io/readability-js-server
+helm repo update
+helm install readability-js-server phpdocker-io/readability-js-server \
+  --namespace readability \
+  --create-namespace
+```
+
+For local chart development, install directly from the repository checkout:
 
 ```bash
 helm install readability-js-server ./charts/readability-js-server
@@ -28,7 +38,7 @@ helm upgrade --install readability-js-server ./charts/readability-js-server \
 
 ## Defaults
 
-- Chart version: `0.1.0`
+- Chart version: `0.1.1`
 - App version: `1.8.0`
 - Image repository: `phpdockerio/readability-js-server`
 - Image tag: `1.8.0`
@@ -65,14 +75,24 @@ The chart exposes the settings most clusters need without requiring a fork:
 
 Chart and application versions are intentionally separate:
 
-- `version` tracks chart packaging changes.
-- `appVersion` tracks the default Readability JS Server image version.
+- `version` tracks chart package changes. Bump it for any chart content change, including templates, values, `Chart.yaml` metadata, README updates, or Artifact Hub annotations.
+- `appVersion` tracks the default Readability JS Server image version used by the chart.
 
 When the chart changes without a new application release, only the chart `version` should move. When the default image tag changes, bump both the chart `version` and `appVersion`.
 
-## Artifact Hub expectations
+Docker image publishing remains tag-driven from the root release workflow and follows `package.json`. Helm chart publishing is separate: pushes to `master` that change `charts/**`, plus explicit manual workflow runs, publish the chart repository to GitHub Pages.
 
-This chart is structured for a conventional Helm repository published via GitHub Pages. Once that repository is in place, Artifact Hub should index the repository URL rather than individual GitHub Release assets. Consumers should expect standard Helm metadata, independent chart and app versioning, and release notes attached to chart packages.
+## Hosted repository and Artifact Hub
+
+The published Helm repository URL is:
+
+```text
+https://phpdocker-io.github.io/readability-js-server
+```
+
+Artifact Hub should register that external Helm repository URL. It should not be pointed at GitHub Releases or at the source repository itself.
+
+Repository-level Artifact Hub metadata lives in `artifacthub-repo.yml`. The chart release workflow copies that file onto `gh-pages` so it is served next to `index.yaml`, which is the layout Artifact Hub expects for ownership claims and verified publisher metadata.
 
 ## Verification
 
@@ -81,4 +101,5 @@ Render and lint the chart locally:
 ```bash
 helm lint charts/readability-js-server
 helm template readability-js-server charts/readability-js-server
+helm package charts/readability-js-server
 ```

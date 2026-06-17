@@ -1,0 +1,70 @@
+name: Chart Release
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - .github/workflows/chart-release.yaml
+      - artifacthub-repo.yml
+      - charts/**
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.7.0
+        with:
+          charts_dir: charts
+          pages_branch: gh-pages
+          packages_with_index: true
+          skip_existing: true
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+
+      - name: Publish Artifact Hub repository metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if ! git ls-remote --exit-code --heads origin gh-pages >/dev/null 2>&1; then
+            echo "gh-pages branch does not exist yet; skipping artifacthub-repo.yml publication"
+            exit 0
+          fi
+
+          tmp_dir="$(mktemp -d)"
+          trap 'rm -rf "${tmp_dir}"' EXIT
+
+          git clone --branch gh-pages --single-branch \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "${tmp_dir}"
+
+          install -m 0644 artifacthub-repo.yml "${tmp_dir}/artifacthub-repo.yml"
+
+          cd "${tmp_dir}"
+          if git diff --quiet -- artifacthub-repo.yml; then
+            echo "artifacthub-repo.yml already up to date on gh-pages"
+            exit 0
+          fi
+
+          git config user.name "${GITHUB_ACTOR}"
+          git config user.email "${GITHUB_ACTOR}@users.noreply.github.com"
+          git add artifacthub-repo.yml
+          git commit -m "Publish Artifact Hub repository metadata"
+          git push origin gh-pages

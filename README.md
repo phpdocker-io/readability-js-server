@@ -131,6 +131,34 @@ make start
 
 Release versions come from [`package.json`](package.json). To publish a release, bump `version`, commit the change, create a `vX.Y.Z` tag, and push that tag. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
 
+## Helm chart
+
+The Kubernetes chart is published as a conventional Helm repository on GitHub Pages:
+
+```bash
+helm repo add phpdocker-io https://phpdocker-io.github.io/readability-js-server
+helm repo update
+helm install readability-js-server phpdocker-io/readability-js-server \
+  --namespace readability \
+  --create-namespace
+```
+
+For local chart development, install from the checkout with `helm install readability-js-server ./charts/readability-js-server`.
+
+Artifact Hub should reference the external Helm repository URL `https://phpdocker-io.github.io/readability-js-server`. It should not be configured to ingest GitHub release assets directly.
+
+## Release and versioning
+
+Docker image publishing remains tag-driven. Bump [`package.json`](package.json), commit it, create the matching `vX.Y.Z` tag, and push the tag to publish the container image and GitHub Release.
+
+Helm chart publishing is separate and runs from chart changes on `master` or an explicit manual trigger. It packages changed charts from `charts/`, updates the GitHub Pages repository on `gh-pages`, and publishes `artifacthub-repo.yml` next to `index.yaml` for Artifact Hub.
+
+For the chart itself:
+
+- Bump `charts/readability-js-server/Chart.yaml` `version` for any chart package change, including templates, defaults, README content, metadata, or publishing annotations.
+- Bump `appVersion` only when the chart's default application image tag changes.
+- When the default application image tag changes, bump both `version` and `appVersion`.
+
 ## Testing
 
 Run the lint and test suites with pnpm:
