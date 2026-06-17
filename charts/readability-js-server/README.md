@@ -38,7 +38,7 @@ helm upgrade --install readability-js-server ./charts/readability-js-server \
 
 ## Defaults
 
-- Chart version: `0.1.1`
+- Chart version: `0.1.0`
 - App version: `1.8.0`
 - Image repository: `phpdockerio/readability-js-server`
 - Image tag: `1.8.0`

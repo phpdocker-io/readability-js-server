@@ -2,7 +2,7 @@ apiVersion: v2
 name: readability-js-server
 description: A production-usable Helm chart for Readability JS Server
 type: application
-version: 0.1.1
+version: 0.1.0
 appVersion: "1.8.0"
 home: https://github.com/phpdocker-io/readability-js-server
 annotations:
