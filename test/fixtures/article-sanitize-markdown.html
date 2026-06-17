@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Sanitize markdown</title>
+  </head>
+  <body>
+    <article>
+      <h1>Sanitize markdown</h1>
+      <p onclick="alert('xss')">Safe paragraph text.</p>
+      <script>
+        alert("xss");
+      </script>
+      <p>Clean tail paragraph.</p>
+    </article>
+  </body>
+</html>

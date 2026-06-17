@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>Unsafe headline</title>
+  </head>
+  <body>
+    <article>
+      <h1>Unsafe headline</h1>
+      <p>Lead paragraph.</p>
+      <img src="https://cdn.example/image.jpg" onerror="alert('xss')" />
+      <video
+        controls
+        src="javascript:alert('xss')"
+        onclick="alert('xss')"
+      ></video>
+      <script>
+        alert("xss");
+      </script>
+      <p>Tail paragraph.</p>
+    </article>
+  </body>
+</html>
