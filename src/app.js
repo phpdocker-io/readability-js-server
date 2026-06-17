@@ -1,10 +1,6 @@
-// Ensure console.log spits out timestamps
-require("log-timestamp");
-
 // Express
 const app = require("express")();
 const bodyParser = require("body-parser").json();
-const port = 3000;
 
 // HTTP client
 const axios = require("axios").default;
@@ -77,12 +73,4 @@ app.post("/", bodyParser, (req, res) => {
     });
 });
 
-// Start server and dump current server version
-const version = require("fs")
-  .readFileSync("./release")
-  .toString()
-  .split(" ")[0];
-
-app.listen(port, () =>
-  console.log(`Readability.js server v${version} listening on port ${port}!`)
-);
+module.exports = app;

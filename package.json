@@ -14,7 +14,7 @@
     "log-timestamp": "^0.3.0"
   },
   "scripts": {
-    "start": "nodemon src/app.js"
+    "start": "nodemon src/server.js"
   },
   "devDependencies": {
     "@types/express": "^5.0.6",
