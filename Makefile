@@ -20,3 +20,10 @@ example-request:
 	curl -XPOST http://localhost:3000/ \
 		-H "Content-Type: application/json" \
 		-d'{"url": "https://en.wikipedia.org/wiki/Firefox"}' | jq
+
+SOAK_REQUESTS ?= 100
+SOAK_CONCURRENCY ?= 2
+SOAK_SAMPLE_EVERY ?= 10
+
+soak:
+	pnpm memory:soak -- --requests $(SOAK_REQUESTS) --concurrency $(SOAK_CONCURRENCY) --sample-every $(SOAK_SAMPLE_EVERY)
