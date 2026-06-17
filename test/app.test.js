@@ -148,6 +148,7 @@ test("configuration defaults are loaded and validated", () => {
     blockPrivateNetworks: DEFAULTS.BLOCK_PRIVATE_NETWORKS,
     readabilityMaxElems: undefined,
     maxConcurrentRequests: DEFAULTS.MAX_CONCURRENT_REQUESTS,
+    contentFormat: DEFAULTS.CONTENT_FORMAT,
   });
 
   assert.throws(

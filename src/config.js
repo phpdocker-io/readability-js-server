@@ -6,6 +6,7 @@ const DEFAULTS = Object.freeze({
   FETCH_MAX_REDIRECTS: 5,
   BLOCK_PRIVATE_NETWORKS: true,
   MAX_CONCURRENT_REQUESTS: 10,
+  CONTENT_FORMAT: "markdown",
 });
 
 const BODY_LIMIT_PATTERN = /^\d+(b|kb|mb|gb)?$/i;
@@ -73,6 +74,17 @@ function parseBodyLimit(rawValue) {
   return rawValue.trim().toLowerCase();
 }
 
+function parseContentFormat(name, rawValue) {
+  const validFormats = ["markdown", "html"];
+  const normalized = String(rawValue).trim().toLowerCase();
+
+  if (!validFormats.includes(normalized)) {
+    throw new Error(`${name} must be one of: ${validFormats.join(", ")}`);
+  }
+
+  return normalized;
+}
+
 function validateConfig(configInput) {
   const config = configInput || {};
 
@@ -100,6 +112,7 @@ function validateConfig(configInput) {
       "MAX_CONCURRENT_REQUESTS",
       config.maxConcurrentRequests,
     ),
+    contentFormat: parseContentFormat("CONTENT_FORMAT", config.contentFormat),
   };
 }
 
@@ -118,6 +131,7 @@ function loadConfig(env = process.env) {
         : env.READABILITY_MAX_ELEMS,
     maxConcurrentRequests:
       env.MAX_CONCURRENT_REQUESTS ?? DEFAULTS.MAX_CONCURRENT_REQUESTS,
+    contentFormat: env.CONTENT_FORMAT ?? DEFAULTS.CONTENT_FORMAT,
   });
 }
 
