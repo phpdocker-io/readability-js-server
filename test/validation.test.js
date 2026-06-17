@@ -13,6 +13,23 @@ test("GET / returns guidance for POST JSON", async () => {
   });
 });
 
+test("GET /healthz returns a lightweight probe response", async (t) => {
+  const fetchMock = t.mock.method(global, "fetch", async () => {
+    throw new Error("fetch should not be called for health checks");
+  });
+
+  t.after(() => {
+    fetchMock.mock.restore();
+  });
+
+  const response = await supertest(createTestApp()).get("/healthz").expect(200);
+
+  assert.deepEqual(response.body, {
+    ok: true,
+  });
+  assert.equal(fetchMock.mock.callCount(), 0);
+});
+
 test("POST / rejects missing and empty url values", async () => {
   const app = createTestApp();
 

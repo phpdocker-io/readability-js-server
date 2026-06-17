@@ -436,6 +436,12 @@ function createApp(configInput, loggerInput) {
   const logger = loggerInput || createLogger();
   const app = express();
 
+  app.get("/healthz", (_req, res) => {
+    res.status(200).json({
+      ok: true,
+    });
+  });
+
   app.use(express.json({ limit: config.requestBodyLimit }));
   app.use(createConcurrencyGate(config.maxConcurrentRequests));
 

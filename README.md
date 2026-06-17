@@ -13,7 +13,7 @@ At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest 
 - Sanitization: DOMPurify 3
 - Deployment image: `node:24-alpine`
 
-The container runs as a non-root user and the service exposes a single `POST /` endpoint.
+The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint.
 
 ## API
 
@@ -193,7 +193,7 @@ This service is still an untrusted content fetcher. Do not relax the defaults wi
 
 ## Limits
 
-- Single endpoint only: `POST /`
+- Public API endpoints: `POST /` and `GET /healthz`
 - No authentication
 - No cache
 - No persistence
