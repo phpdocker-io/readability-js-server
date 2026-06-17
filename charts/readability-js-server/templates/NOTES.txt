@@ -1,0 +1,18 @@
+1. Check the release status:
+  kubectl get pods --namespace {{ .Release.Namespace }} -l "app.kubernetes.io/instance={{ .Release.Name }}"
+
+2. Port-forward the service locally:
+  kubectl --namespace {{ .Release.Namespace }} port-forward svc/{{ include "readability-js-server.fullname" . }} 3000:{{ .Values.service.port }}
+
+3. Probe the service:
+  curl -i http://127.0.0.1:3000/healthz
+{{- if .Values.ingress.enabled }}
+
+4. If your ingress controller is ready, test the configured hostnames:
+{{- range .Values.ingress.hosts }}
+{{- $host := .host }}
+{{- range .paths }}
+  curl -i http{{ if $.Values.ingress.tls }}s{{ end }}://{{ $host }}{{ .path }}
+{{- end }}
+{{- end }}
+{{- end }}

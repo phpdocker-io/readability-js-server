@@ -13,7 +13,7 @@ At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest 
 - Sanitization: DOMPurify 3
 - Deployment image: `node:24-alpine`
 
-The container runs as a non-root user and the service exposes a single `POST /` endpoint.
+The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint. The Compose example uses that same `/healthz` path for its container healthcheck.
 
 ## API
 
@@ -131,6 +131,34 @@ make start
 
 Release versions come from [`package.json`](package.json). To publish a release, bump `version`, commit the change, create a `vX.Y.Z` tag, and push that tag. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
 
+## Helm chart
+
+The Kubernetes chart is published as a conventional Helm repository on GitHub Pages:
+
+```bash
+helm repo add phpdocker-io https://phpdocker-io.github.io/readability-js-server
+helm repo update
+helm install readability-js-server phpdocker-io/readability-js-server \
+  --namespace readability \
+  --create-namespace
+```
+
+For local chart development, install from the checkout with `helm install readability-js-server ./charts/readability-js-server`.
+
+Artifact Hub should reference the external Helm repository URL `https://phpdocker-io.github.io/readability-js-server`. It should not be configured to ingest GitHub release assets directly.
+
+## Release and versioning
+
+Docker image publishing remains tag-driven. Bump [`package.json`](package.json), commit it, create the matching `vX.Y.Z` tag, and push the tag to publish the container image and GitHub Release.
+
+Helm chart publishing is separate and runs from chart changes on `master` or an explicit manual trigger. It packages changed charts from `charts/`, updates the GitHub Pages repository on `gh-pages`, and publishes `artifacthub-repo.yml` next to `index.yaml` for Artifact Hub.
+
+For the chart itself:
+
+- Bump `charts/readability-js-server/Chart.yaml` `version` for any chart package change, including templates, defaults, README content, metadata, or publishing annotations.
+- Bump `appVersion` only when the chart's default application image tag changes.
+- When the default application image tag changes, bump both `version` and `appVersion`.
+
 ## Testing
 
 Run the lint and test suites with pnpm:
@@ -138,6 +166,13 @@ Run the lint and test suites with pnpm:
 ```bash
 pnpm lint
 pnpm test
+```
+
+Run the Helm chart checks with the Makefile:
+
+```bash
+make helm-lint
+make helm-template
 ```
 
 The repo also exposes a memory soak harness:
@@ -155,6 +190,7 @@ The Makefile provides the same checks:
 ```bash
 make lint
 make lint-fix
+make helm-verify
 ```
 
 For release tagging there is also:
@@ -174,9 +210,9 @@ docker run --rm -p 3000:3000 readability-js
 
 The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
 
-CI on pull requests and pushes to `master` runs lint and tests only. Container publishing happens from the tag-triggered release workflow.
+CI on pull requests and pushes to `master` runs lint, tests, and Helm chart verification. Container publishing happens from the tag-triggered release workflow.
 
-For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml).
+For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml). That example publishes port `3000` and checks `GET /healthz` from inside the container using the `node` runtime that ships in the published image.
 
 ## Security posture
 
@@ -193,7 +229,7 @@ This service is still an untrusted content fetcher. Do not relax the defaults wi
 
 ## Limits
 
-- Single endpoint only: `POST /`
+- Public API endpoints: `POST /` and `GET /healthz`
 - No authentication
 - No cache
 - No persistence

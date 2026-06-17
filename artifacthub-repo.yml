@@ -1,0 +1,11 @@
+# Artifact Hub repository metadata for the published Helm repository.
+# This file must be served from the same path as index.yaml:
+# https://phpdocker-io.github.io/readability-js-server/artifacthub-repo.yml
+#
+# Add repositoryID after the repository has been created in Artifact Hub to
+# enable verified publisher checks.
+# repositoryID: 00000000-0000-0000-0000-000000000000
+
+owners:
+  - name: Luis Pabon
+    email: luis.pabon@auronconsulting.co.uk
