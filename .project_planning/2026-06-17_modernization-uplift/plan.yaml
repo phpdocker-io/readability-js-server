@@ -1,0 +1,230 @@
+steps:
+  - id: step-1
+    title: Modularize app startup for testability
+    scope: Split the Express app creation from server startup while preserving current endpoint behavior. Introduce small modules only where they support later testability and configuration.
+    files:
+      - src/app.js
+      - src/server.js
+      - package.json
+    constraints:
+      - Keep POST / and GET / behavior compatible at this stage.
+      - Do not change dependency manager or fetch behavior in this step.
+      - Export the Express app without binding port 3000.
+    acceptance:
+      - Tests or later code can import an Express app without opening a port.
+      - Server startup still reads the release version and listens on the default port.
+      - Manual start behavior remains equivalent before later config changes.
+    verification:
+      - node src/server.js
+      - Existing formatting command if still available.
+
+  - id: step-2
+    title: Add characterization tests around the current API
+    scope: Introduce a Node-native test setup that pins current endpoint behavior before broader implementation changes.
+    files:
+      - package.json
+      - test/
+      - src/app.js
+    constraints:
+      - Use Node's built-in test runner and node:assert/strict.
+      - Use supertest for endpoint tests.
+      - Prefer local HTTP fixtures or injectable fetch over live network calls.
+      - Keep assertions focused on API shape, status codes, and important content properties rather than byte-for-byte full HTML snapshots.
+    acceptance:
+      - Tests cover missing/empty URL, GET / guidance, successful extraction shape, and fetch/parse failure shape as currently understood.
+      - Tests can run without binding port 3000.
+      - Test command is available from package scripts.
+    verification:
+      - pnpm test or temporary package-manager equivalent until pnpm migration lands.
+
+  - id: step-3
+    title: Migrate package management and dependency set
+    scope: Move from Yarn Classic to pnpm, remove obsolete dependencies, add test dependencies, and upgrade current dependencies where published releases exist.
+    files:
+      - package.json
+      - yarn.lock
+      - pnpm-lock.yaml
+      - Dockerfile
+      - Makefile
+    constraints:
+      - Pin packageManager to a current pnpm version.
+      - Remove axios, body-parser, log-timestamp, @types/express, and PM2 usage from the default dependency path.
+      - Keep @mozilla/readability at 0.6.0 because it is latest on npm.
+      - Upgrade jsdom, dompurify, nodemon, and prettier to current compatible versions.
+      - Keep express at current latest if already current.
+    acceptance:
+      - Fresh install works with pnpm.
+      - No Yarn lockfile remains.
+      - Dependency list reflects the approved strategy.
+      - Existing tests still pass after dependency changes.
+    verification:
+      - pnpm install --frozen-lockfile
+      - pnpm test
+      - pnpm lint
+
+  - id: step-4
+    title: Add configuration, local logging, and explicit response mapping
+    scope: Introduce a small configuration layer, local timestamped logger, and explicit API response mapping for Readability output.
+    files:
+      - src/
+      - test/
+      - package.json
+    constraints:
+      - Defaults: PORT=3000, REQUEST_BODY_LIMIT=16kb, FETCH_TIMEOUT_MS=10000, FETCH_MAX_BYTES=5242880, FETCH_MAX_REDIRECTS=5, BLOCK_PRIVATE_NETWORKS=true, optional READABILITY_MAX_ELEMS, and modest MAX_CONCURRENT_REQUESTS.
+      - Reject invalid configuration clearly during startup or request handling.
+      - Explicitly export only url, title, byline, dir, content, length, excerpt, siteName, textContent, lang, and publishedTime.
+      - Preserve backward-compatible field names.
+    acceptance:
+      - log-timestamp is replaced by local timestamped logging.
+      - Response mapping no longer spreads arbitrary Readability output.
+      - Tests cover configured defaults and explicit response fields.
+    verification:
+      - pnpm test
+      - pnpm lint
+
+  - id: step-5
+    title: Replace Axios path with guarded built-in fetch
+    scope: Implement Node 24 built-in fetch for outbound page retrieval with timeout, redirect handling, content-type validation, byte caps, normalized errors, and private-network protection.
+    files:
+      - src/
+      - test/
+    constraints:
+      - Use redirect: manual so each redirect target can be validated.
+      - Enforce http/https URL schemes always.
+      - Enforce private-network blocking by default and allow BLOCK_PRIVATE_NETWORKS=false.
+      - Enforce FETCH_TIMEOUT_MS, FETCH_MAX_BYTES, and FETCH_MAX_REDIRECTS.
+      - Do not return raw internal error objects.
+      - Preserve top-level error string compatibility while normalizing details.
+    acceptance:
+      - Tests cover invalid schemes, private-network blocking enabled/disabled, redirects, redirect loops/limits, timeout, oversized response, non-HTML content, fetch failures, and normalized error details.
+      - No axios dependency or Axios-specific error behavior remains.
+      - Resource-limit failures return stable error codes in details.
+    verification:
+      - pnpm test
+      - pnpm lint
+
+  - id: step-6
+    title: Update parsing and sanitization pipeline
+    scope: Keep jsdom as the DOM implementation, apply Readability options, and sanitize the extracted Readability content before returning it.
+    files:
+      - src/
+      - test/
+    constraints:
+      - Do not switch to linkedom.
+      - Keep jsdom scripts/resources disabled.
+      - Sanitize returned content with DOMPurify.
+      - Preserve allowed iframe and video behavior unless tests reveal unsafe behavior that must be documented.
+      - Apply READABILITY_MAX_ELEMS only when configured.
+    acceptance:
+      - Tests prove scripts and dangerous attributes/URLs are removed from returned content.
+      - Tests prove allowed media tags remain where expected.
+      - Successful response shape includes current Readability fields that are available.
+    verification:
+      - pnpm test
+      - pnpm lint
+
+  - id: step-7
+    title: Add concurrency limiting and memory soak harness
+    scope: Add a configurable in-process guard for active expensive request/parse work and a non-gating memory soak script for investigating issue #35 and future parser changes.
+    files:
+      - src/
+      - scripts/
+      - test/
+      - package.json
+    constraints:
+      - MAX_CONCURRENT_REQUESTS should have a modest default and clear 429 or stable overload behavior.
+      - Memory soak should use local fixtures or a local fixture server, not live websites.
+      - Memory soak should exercise the HTTP API path.
+      - Memory soak should report request count, failures, RSS, heap used, external memory, and trends.
+      - Memory soak must not be a default CI gate.
+    acceptance:
+      - Tests cover overload behavior.
+      - pnpm memory:soak runs locally and prints useful memory trend output.
+      - README can explain how to use the soak harness for long-running investigations.
+    verification:
+      - pnpm test
+      - pnpm memory:soak -- --requests 100 --concurrency 2
+
+  - id: step-8
+    title: Simplify Docker image and update CI gating
+    scope: Remove PM2 from the default container path, run one Node process, update pnpm-based image build, and add CI checks that gate Docker build/publish.
+    files:
+      - Dockerfile
+      - pm2.json
+      - Makefile
+      - .github/workflows/
+      - package.json
+    constraints:
+      - Default container command should run node directly.
+      - Preserve non-root runtime user.
+      - CI checks should run on pull_request and push to master.
+      - Docker build/publish should depend on install/lint/test checks.
+      - Publish should remain limited to master when release changes.
+    acceptance:
+      - pm2.json is removed or no longer part of the default runtime path.
+      - Docker image builds with pnpm lockfile.
+      - CI has an install/lint/test gate.
+      - Existing release-tag behavior is preserved.
+    verification:
+      - pnpm test
+      - pnpm lint
+      - docker build -t readability-js .
+
+  - id: step-9
+    title: Rewrite README and AGENTS documentation
+    scope: Update user-facing README and operational agent guidance to match the modernized service.
+    files:
+      - README.md
+      - AGENTS.md
+      - Makefile
+      - package.json
+    constraints:
+      - README should document Node 24, pnpm, Docker, API request/response fields, error format, config env vars, security posture, limits, memory behavior, memory soak usage, local development, testing, and deployment scaling.
+      - AGENTS.md should be concise and operational rather than duplicating the README.
+      - AGENTS.md should include API compatibility rules, commands, testing expectations, memory/security constraints, and dependency/DOM policy.
+    acceptance:
+      - README examples match implemented commands and response fields.
+      - AGENTS.md accurately guides future coding agents.
+      - Documentation explicitly notes @mozilla/readability is already latest on npm at the time of the uplift.
+    verification:
+      - pnpm lint
+      - pnpm test
+
+  - id: step-10
+    title: Final verification and release readiness check
+    scope: Run the full intended verification set, inspect the final diff for accidental API/documentation drift, and record any residual risks.
+    files:
+      - package.json
+      - pnpm-lock.yaml
+      - Dockerfile
+      - README.md
+      - AGENTS.md
+      - .github/workflows/
+      - src/
+      - test/
+      - scripts/
+    depends_on:
+      - step-1
+      - step-2
+      - step-3
+      - step-4
+      - step-5
+      - step-6
+      - step-7
+      - step-8
+      - step-9
+    constraints:
+      - Do not broaden scope into new product features.
+      - Do not make memory soak a blocking CI threshold unless separately approved.
+      - Preserve current release-file publishing semantics.
+    acceptance:
+      - Full tests and lint pass.
+      - Docker image builds.
+      - Memory soak runs and produces a report.
+      - Final diff matches the approved modernization scope.
+    verification:
+      - pnpm install --frozen-lockfile
+      - pnpm lint
+      - pnpm test
+      - pnpm memory:soak -- --requests 100 --concurrency 2
+      - docker build -t readability-js .
