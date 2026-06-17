@@ -16,8 +16,11 @@
 - Memory soak: `make soak` or `node scripts/memory-soak.js --requests 100 --concurrency 2 --sample-every 10`
 - Docker build: `docker build -t readability-js .`
 - Docker run: `docker run --rm -p 3000:3000 readability-js`
+- Release tag: `make release-tag VERSION=1.8.0`
 
-The Makefile mirrors those workflows with `make install`, `make start`, `make lint`, `make lint-fix`, `make build-container`, `make run-container`, and `make example-request`.
+The Makefile mirrors those workflows with `make install`, `make start`, `make lint`, `make lint-fix`, `make build-container`, `make run-container`, `make release-tag`, and `make example-request`.
+
+`package.json` is the single source of truth for the service version. Release publishing is tag-driven: bump `package.json`'s `version`, commit it, create a matching `vX.Y.Z` tag, and push the tag to trigger Docker publish plus GitHub Release creation.
 
 ## Testing expectations
 

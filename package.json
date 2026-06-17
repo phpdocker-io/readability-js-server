@@ -1,5 +1,6 @@
 {
   "name": "readability-js-server",
+  "version": "1.8.0",
   "description": "Mozilla's Readability.js as a service",
   "author": "Luis Pabon @ phpdocker.io",
   "homepage": "https://github.com/phpdocker-io/readability-js-server",
@@ -15,12 +16,16 @@
   },
   "scripts": {
     "start": "nodemon src/server.js",
-    "test": "node --test",
-    "lint": "prettier -c src/ test/ scripts/",
-    "lint:fix": "prettier -w src/ test/ scripts/",
+    "test": "node --test test/*.test.js",
+    "lint": "eslint src/ test/ scripts/ && prettier -c src/ test/ scripts/",
+    "lint:fix": "eslint --fix src/ test/ scripts/ && prettier --write src/ test/ scripts/",
     "memory:soak": "node scripts/memory-soak.js"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.5.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-n": "^18.1.0",
     "nodemon": "^3.1.14",
     "prettier": "^3.8.4",
     "supertest": "^7.1.4"

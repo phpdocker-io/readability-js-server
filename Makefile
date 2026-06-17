@@ -16,6 +16,14 @@ build-container:
 run-container:
 	docker run --rm -p3000:3000 readability-js
 
+release-tag:
+	@if [ -z "$(VERSION)" ]; then \
+		echo "Usage: make release-tag VERSION=x.y.z"; \
+		exit 1; \
+	fi
+	git tag v$(VERSION)
+	@echo "Created tag v$(VERSION). Push it with: git push origin v$(VERSION)"
+
 example-request:
 	curl -XPOST http://localhost:3000/ \
 		-H "Content-Type: application/json" \
