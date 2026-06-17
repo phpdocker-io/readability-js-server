@@ -9,10 +9,10 @@
 
 ## Commands
 
-- Install: `pnpm install --frozen-lockfile`
-- Start: `pnpm start`
-- Lint: `pnpm lint`
-- Test: `pnpm test`
+- Install: `npm ci`
+- Start: `npm start`
+- Lint: `npm run lint`
+- Test: `npm test`
 - Helm lint: `make helm-lint` or `helm lint charts/readability-js-server`
 - Helm template: `make helm-template` or `helm template readability-js-server charts/readability-js-server`
 - Memory soak: `make soak` or `node scripts/memory-soak.js --requests 100 --concurrency 2 --sample-every 10`
@@ -26,20 +26,21 @@ The Makefile mirrors those workflows with `make install`, `make start`, `make li
 
 ## Testing expectations
 
-- Run `pnpm lint`, `pnpm test`, and the Helm verification targets for any docs, API, config, chart, or dependency change.
+- Run `npm run lint`, `npm test`, and the Helm verification targets for any docs, API, config, chart, or dependency change.
 - Add or update tests when a change touches response shape, error normalization, URL validation, sanitization, redirect handling, concurrency gating, or config parsing.
 - Use the memory soak script when a change could affect allocation behavior or long-run stability.
 
 ## Memory and security constraints
 
 - Keep the default SSRF protections: private-network blocking on, absolute `http:`/`https:` URLs only, redirect limits, HTML-only fetches, body-size limits, and timeouts.
-- Keep DOMPurify sanitization in place.
-- Keep jsdom parsing free of external resource loading and script execution.
+- Keep sanitize-html sanitization in place with the iframe/video allowlist.
+- Keep linkedom parsing free of external resource loading and script execution.
 - Preserve the current `iframe` and `video` allowlist only if the tests still cover the intended surface.
 - Treat any memory growth that appears only under load as a regression candidate until a longer soak shows it is expected allocator behavior.
 
 ## Dependency and DOM policy
 
 - `@mozilla/readability@0.6.0` was already the latest npm release at the time of the uplift. Do not upgrade it casually.
-- Only widen DOMPurify or Readability/jsdom behavior with a clear reason and tests.
-- Keep the container on Node 24 and the repo on pnpm 11.7.0 unless the branch explicitly changes runtime policy.
+- Only widen sanitize-html or Readability/linkedom behavior with a clear reason and tests.
+- Keep the container on Node 24.
+- linkedom 0.18.x and sanitize-html 2.17.x are the supported parser and sanitizer pins; sanitize-html upstream is archived, do not expect backports.

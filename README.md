@@ -7,10 +7,10 @@ At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest 
 ## Overview
 
 - Runtime: Node.js 24
-- Package manager: pnpm 11.7.0
+- Package manager: npm
 - Web framework: Express 5
-- HTML parsing: jsdom 29
-- Sanitization: DOMPurify 3
+- HTML parsing: linkedom 0.18
+- Sanitization: sanitize-html 2.17
 - Deployment image: `node:24-alpine`
 
 The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint. The Compose example uses that same `/healthz` path for its container healthcheck.
@@ -103,7 +103,7 @@ All configuration is driven by environment variables.
 Example:
 
 ```bash
-PORT=3000 MAX_CONCURRENT_REQUESTS=20 pnpm start
+PORT=3000 MAX_CONCURRENT_REQUESTS=20 npm start
 ```
 
 ## Local development
@@ -111,13 +111,13 @@ PORT=3000 MAX_CONCURRENT_REQUESTS=20 pnpm start
 Prerequisites:
 
 - Node.js 24
-- pnpm 11.7.0
+- npm (bundled with Node.js)
 
 Install and start:
 
 ```bash
-pnpm install --frozen-lockfile
-pnpm start
+npm ci
+npm start
 ```
 
 The server starts on `http://localhost:3000/` by default.
@@ -161,11 +161,11 @@ For the chart itself:
 
 ## Testing
 
-Run the lint and test suites with pnpm:
+Run the lint and test suites with npm:
 
 ```bash
-pnpm lint
-pnpm test
+npm run lint
+npm test
 ```
 
 Run the Helm chart checks with the Makefile:
@@ -221,9 +221,9 @@ For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml). 
 - Redirects are followed manually and capped.
 - Upstream responses must be HTML.
 - Upstream bodies are capped by byte size and timeout.
-- Article HTML is sanitized with DOMPurify.
+- Article HTML is sanitized with sanitize-html. No external resources are loaded; no script execution is triggered.
 - `iframe` and `video` tags are intentionally allowed, along with a narrow attribute allowlist.
-- jsdom is used with its default disabled external-loading and script-execution behavior during parsing.
+- linkedom is used for parsing with no external resource loading or script execution.
 
 This service is still an untrusted content fetcher. Do not relax the defaults without tests that cover the new risk.
 

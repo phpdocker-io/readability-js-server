@@ -5,19 +5,16 @@ const path = require("node:path");
 
 const WORKER_SCRIPT = path.join(__dirname, "parser-worker.js");
 
-function createParserPool(maxParses = 500) {
+function createParserPool() {
   let child = null;
   let childReady = false;
-  let recycleRequested = false;
   let readyResolvers = [];
   const pending = new Map();
   let nextId = 0;
 
   function spawn() {
     childReady = false;
-    recycleRequested = false;
     child = fork(WORKER_SCRIPT, [], {
-      env: { ...process.env, PARSER_MAX_PARSES: String(maxParses) },
       serialization: "advanced",
       stdio: "inherit",
     });
@@ -37,12 +34,6 @@ function createParserPool(maxParses = 500) {
       return;
     }
 
-    if (msg.type === "recycle") {
-      recycleRequested = true;
-      maybeRecycle();
-      return;
-    }
-
     const entry = pending.get(msg.id);
     if (!entry) return;
     pending.delete(msg.id);
@@ -56,24 +47,6 @@ function createParserPool(maxParses = 500) {
     if (pending.size === 0 && child) {
       child.unref();
       child.channel.unref();
-    }
-
-    if (recycleRequested) {
-      maybeRecycle();
-    }
-  }
-
-  function maybeRecycle() {
-    if (!recycleRequested || pending.size > 0) return;
-
-    const old = child;
-    child = null;
-    childReady = false;
-    recycleRequested = false;
-
-    if (old) {
-      old.removeAllListeners();
-      old.kill();
     }
   }
 
@@ -97,7 +70,7 @@ function createParserPool(maxParses = 500) {
   }
 
   function ensureChild() {
-    if (child && childReady && !recycleRequested) {
+    if (child && childReady) {
       return Promise.resolve();
     }
     if (child && !childReady) {
