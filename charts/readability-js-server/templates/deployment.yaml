@@ -1,0 +1,102 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "readability-js-server.fullname" . }}
+  labels:
+    {{- include "readability-js-server.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "readability-js-server.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "readability-js-server.selectorLabels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "readability-js-server.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
+      containers:
+        - name: {{ include "readability-js-server.name" . }}
+          image: "{{ .Values.image.repository }}:{{ default .Chart.AppVersion .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          {{- with .Values.containerSecurityContext }}
+          securityContext:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ default .Values.appConfig.PORT .Values.containerPort }}
+              protocol: TCP
+          env:
+            - name: PORT
+              value: {{ printf "%d" (int64 .Values.appConfig.PORT) | quote }}
+            - name: REQUEST_BODY_LIMIT
+              value: {{ .Values.appConfig.REQUEST_BODY_LIMIT | quote }}
+            - name: FETCH_TIMEOUT_MS
+              value: {{ printf "%d" (int64 .Values.appConfig.FETCH_TIMEOUT_MS) | quote }}
+            - name: FETCH_MAX_BYTES
+              value: {{ printf "%d" (int64 .Values.appConfig.FETCH_MAX_BYTES) | quote }}
+            - name: FETCH_MAX_REDIRECTS
+              value: {{ printf "%d" (int64 .Values.appConfig.FETCH_MAX_REDIRECTS) | quote }}
+            - name: BLOCK_PRIVATE_NETWORKS
+              value: {{ printf "%v" .Values.appConfig.BLOCK_PRIVATE_NETWORKS | quote }}
+            {{- if ne .Values.appConfig.READABILITY_MAX_ELEMS nil }}
+            - name: READABILITY_MAX_ELEMS
+              value: {{ printf "%d" (int64 .Values.appConfig.READABILITY_MAX_ELEMS) | quote }}
+            {{- end }}
+            - name: MAX_CONCURRENT_REQUESTS
+              value: {{ printf "%d" (int64 .Values.appConfig.MAX_CONCURRENT_REQUESTS) | quote }}
+            - name: CONTENT_FORMAT
+              value: {{ .Values.appConfig.CONTENT_FORMAT | quote }}
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
+            {{- include "readability-js-server.httpProbe" .Values.probes.startup | nindent 12 }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            {{- include "readability-js-server.httpProbe" .Values.probes.liveness | nindent 12 }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            {{- include "readability-js-server.httpProbe" .Values.probes.readiness | nindent 12 }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

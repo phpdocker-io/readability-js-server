@@ -1,0 +1,25 @@
+{{- if .Values.pdb.enabled }}
+{{- $hasMin := ne .Values.pdb.minAvailable nil }}
+{{- $hasMax := ne .Values.pdb.maxUnavailable nil }}
+{{- if and $hasMin $hasMax }}
+{{- fail "pdb.minAvailable and pdb.maxUnavailable are mutually exclusive" }}
+{{- end }}
+{{- if and (not $hasMin) (not $hasMax) }}
+{{- fail "set pdb.minAvailable or pdb.maxUnavailable when pdb.enabled=true" }}
+{{- end }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "readability-js-server.fullname" . }}
+  labels:
+    {{- include "readability-js-server.labels" . | nindent 4 }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "readability-js-server.selectorLabels" . | nindent 6 }}
+  {{- if $hasMin }}
+  minAvailable: {{ .Values.pdb.minAvailable }}
+  {{- else }}
+  maxUnavailable: {{ .Values.pdb.maxUnavailable }}
+  {{- end }}
+{{- end }}
