@@ -141,4 +141,9 @@ async function assertAllowedUrl(rawUrl, config) {
   return parsedUrl;
 }
 
-module.exports = { assertAllowedUrl, isPrivateIp, isPrivateIpv4, isPrivateIpv6 };
+module.exports = {
+  assertAllowedUrl,
+  isPrivateIp,
+  isPrivateIpv4,
+  isPrivateIpv6,
+};
