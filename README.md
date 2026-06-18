@@ -129,7 +129,7 @@ make install
 make start
 ```
 
-Release versions come from [`package.json`](package.json). To publish a release, bump `version`, commit the change, create a `vX.Y.Z` tag, and push that tag. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
+Release versions come from the git tag (`vX.Y.Z`). To publish a release, create a `vX.Y.Z` tag and push it. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
 
 ## Helm chart
 
@@ -149,7 +149,7 @@ Artifact Hub should reference the external Helm repository URL `https://phpdocke
 
 ## Release and versioning
 
-Docker image publishing remains tag-driven. Bump [`package.json`](package.json), commit it, create the matching `vX.Y.Z` tag, and push the tag to publish the container image and GitHub Release.
+Docker image publishing remains tag-driven. Create the matching `vX.Y.Z` tag and push it to publish the container image and GitHub Release.
 
 Helm chart publishing is separate and runs from chart changes on `master` or an explicit manual trigger. It packages changed charts from `charts/`, updates the GitHub Pages repository on `gh-pages`, and publishes `artifacthub-repo.yml` next to `index.yaml` for Artifact Hub.
 
