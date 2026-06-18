@@ -1,6 +1,5 @@
 const { loadConfig } = require("./config");
 const app = require("./app");
-const { version } = require("../package.json");
 
 const config = loadConfig();
 
@@ -18,7 +17,7 @@ function logError(message, error) {
 
 const shutdownTimeoutMs = 10_000;
 const server = app.listen(config.port, () => {
-  log(`Readability.js server v${version} listening on port ${config.port}!`);
+  log(`Readability.js server listening on port ${config.port}!`);
 });
 
 let isShuttingDown = false;

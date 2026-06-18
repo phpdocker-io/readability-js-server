@@ -80,7 +80,7 @@ Chart and application versions are intentionally separate:
 
 When the chart changes without a new application release, only the chart `version` should move. When the default image tag changes, bump both the chart `version` and `appVersion`.
 
-Docker image publishing remains tag-driven from the root release workflow and follows `package.json`. Helm chart publishing is separate: pushes to `master` that change `charts/**`, plus explicit manual workflow runs, publish the chart repository to GitHub Pages.
+Docker image publishing remains tag-driven from the root release workflow and follows the git tag. Helm chart publishing is separate: pushes to `master` that change `charts/**`, plus explicit manual workflow runs, publish the chart repository to GitHub Pages.
 
 ## Hosted repository and Artifact Hub
 

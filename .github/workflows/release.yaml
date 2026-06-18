@@ -45,12 +45,6 @@ jobs:
             exit 1
           fi
 
-          PACKAGE_VERSION="$(node -p "require('./package.json').version")"
-          if [ "${PACKAGE_VERSION}" != "${VERSION}" ]; then
-            echo "Tag version ${VERSION} does not match package.json version ${PACKAGE_VERSION}" >&2
-            exit 1
-          fi
-
           {
             echo "version=${VERSION}"
             echo "major=${MAJOR}"

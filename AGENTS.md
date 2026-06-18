@@ -22,7 +22,7 @@
 
 The Makefile mirrors those workflows with `make install`, `make start`, `make lint`, `make lint-fix`, `make helm-lint`, `make helm-template`, `make helm-verify`, `make build-container`, `make run-container`, `make release-tag`, and `make example-request`.
 
-`package.json` is the single source of truth for the service version. Release publishing is tag-driven: bump `package.json`'s `version`, commit it, create a matching `vX.Y.Z` tag, and push the tag to trigger Docker publish plus GitHub Release creation.
+Release publishing is tag-driven: create a matching `vX.Y.Z` git tag and push it to trigger Docker publish plus GitHub Release creation. The service version is no longer stored in `package.json`.
 
 ## Testing expectations
 
