@@ -4,6 +4,15 @@ Readability JS Server is a small HTTP service that fetches a page, sanitizes the
 
 At the time of this uplift, `@mozilla/readability@0.6.0` was already the latest release on npm, so the service stays on that version.
 
+## Migrating from v1
+
+The `content` response field is now returned as **markdown by default** instead of HTML. If you are upgrading from v1, existing consumers that expect HTML must either:
+
+1. Set the `CONTENT_FORMAT=html` environment variable (server-wide), or
+2. Pass `contentFormat: "html"` in each request body
+
+Markdown output is more portable and easier to consume in many contexts, but any integration that renders the `content` field directly as HTML must opt back in to the old behaviour.
+
 ## Overview
 
 - Runtime: Node.js 24
@@ -237,15 +246,6 @@ This service is still an untrusted content fetcher. Do not relax the defaults wi
 - No built-in distributed rate limiting
 - Per-process concurrency is capped by `MAX_CONCURRENT_REQUESTS`
 - The response shape is fixed; do not add fields casually
-
-## Breaking change: contentFormat default
-
-The `content` response field is now returned as **markdown by default** instead of HTML. Existing consumers that expect HTML must either:
-
-1. Set the `CONTENT_FORMAT=html` environment variable (server-wide default), or
-2. Pass `contentFormat: "html"` in each request
-
-This change makes article content more portable and easier to consume, but requires explicit opt-in to preserve the previous HTML output.
 
 ## Memory behavior
 
