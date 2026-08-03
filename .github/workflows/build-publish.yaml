@@ -8,6 +8,9 @@ on:
   # Allow workflow to be manually run from the GitHub UI
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
   checks:
     runs-on: ubuntu-latest
