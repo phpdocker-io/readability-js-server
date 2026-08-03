@@ -1,5 +1,5 @@
 const js = require("@eslint/js");
-const n = require("eslint-plugin-n").default;
+const n = require("eslint-plugin-n");
 const eslintConfigPrettier = require("eslint-config-prettier/flat");
 
 const nodeRecommendedScript = n.configs["flat/recommended-script"];
