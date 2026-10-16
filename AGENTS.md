@@ -43,4 +43,4 @@ Release publishing is tag-driven: create a matching `vX.Y.Z` git tag and push it
 - `@mozilla/readability@0.6.0` was already the latest npm release at the time of the uplift. Do not upgrade it casually.
 - Only widen sanitize-html or Readability/linkedom behavior with a clear reason and tests.
 - Keep the container on Node 24.
-- linkedom 0.18.x and sanitize-html 2.17.x are the supported parser and sanitizer pins; sanitize-html upstream is archived, do not expect backports.
+- Do not hold linkedom or sanitize-html at a fixed supported version; take the latest compatible release. A caret range on a `0.x` package still pins its minor (`^0.18.13` keeps linkedom on 0.18), so bump that line by hand. The standalone sanitize-html repository is archived, so expect no backports and track new releases from the apostrophe monorepo.

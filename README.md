@@ -18,8 +18,8 @@ Markdown output is more portable and easier to consume in many contexts, but any
 - Runtime: Node.js 24
 - Package manager: npm
 - Web framework: Express 5
-- HTML parsing: linkedom 0.18
-- Sanitization: sanitize-html 2.17
+- HTML parsing: linkedom
+- Sanitization: sanitize-html
 - Deployment image: `node:24-alpine`
 
 The container runs as a non-root user and the service exposes `POST /` plus a lightweight `GET /healthz` probe endpoint. The Compose example uses that same `/healthz` path for its container healthcheck.
