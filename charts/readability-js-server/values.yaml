@@ -6,7 +6,8 @@ fullnameOverride: ""
 image:
   repository: phpdockerio/readability-js-server
   pullPolicy: IfNotPresent
-  tag: "1.8.0"
+  # Empty falls back to the chart appVersion.
+  tag: ""
 
 imagePullSecrets: []
 

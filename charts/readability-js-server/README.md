@@ -41,7 +41,7 @@ helm upgrade --install readability-js-server ./charts/readability-js-server \
 - Chart version: `0.1.0`
 - App version: `1.8.0`
 - Image repository: `phpdockerio/readability-js-server`
-- Image tag: `1.8.0`
+- Image tag: chart `appVersion` (override with `image.tag`)
 - Container listen port: `3000`
 - Service type: `ClusterIP`
 - Replica count: `1`
