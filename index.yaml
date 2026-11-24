@@ -3,6 +3,43 @@ entries:
   readability-js-server:
   - annotations:
       artifacthub.io/changes: |
+        - kind: changed
+          description: Update npm dependencies to latest compatible releases.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: source
+          url: https://github.com/phpdocker-io/readability-js-server
+        - name: support
+          url: https://github.com/phpdocker-io/readability-js-server/issues
+        - name: chart repository
+          url: https://phpdocker-io.github.io/readability-js-server
+      artifacthub.io/maintainers: |
+        - name: Luis Pabon
+          email: luis.pabon@auronconsulting.co.uk
+    apiVersion: v2
+    appVersion: 2.0.4
+    created: "2026-11-24T13:45:45.053561105Z"
+    description: A production-usable Helm chart for Readability JS Server
+    digest: 7997f50a692d7be1ac2f2de325f8a451884a7bf1c731bf5f4b3cc0441cc575d1
+    home: https://github.com/phpdocker-io/readability-js-server
+    keywords:
+    - readability
+    - article-extraction
+    - express
+    - nodejs
+    maintainers:
+    - email: luis.pabon@auronconsulting.co.uk
+      name: Luis Pabon
+      url: https://github.com/luispabon
+    name: readability-js-server
+    sources:
+    - https://github.com/phpdocker-io/readability-js-server
+    type: application
+    urls:
+    - readability-js-server-2.0.4.tgz
+    version: 2.0.4
+  - annotations:
+      artifacthub.io/changes: |
         - kind: added
           description: Publish chart packages and index.yaml to the GitHub Pages Helm repository.
         - kind: added
@@ -79,4 +116,4 @@ entries:
     urls:
     - readability-js-server-0.1.0.tgz
     version: 0.1.0
-generated: "2026-11-24T13:42:13.246756704Z"
+generated: "2026-11-24T13:45:45.053572772Z"
