@@ -2,9 +2,8 @@
 # This file must be served from the same path as index.yaml:
 # https://phpdocker-io.github.io/readability-js-server/artifacthub-repo.yml
 #
-# Add repositoryID after the repository has been created in Artifact Hub to
-# enable verified publisher checks.
-# repositoryID: 00000000-0000-0000-0000-000000000000
+# repositoryID enables the Verified Publisher badge on Artifact Hub.
+repositoryID: b10e28bd-f8e0-420d-ba48-d5d31f87ae5d
 
 owners:
   - name: Luis Pabon
