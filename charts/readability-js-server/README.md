@@ -73,14 +73,12 @@ The chart exposes the settings most clusters need without requiring a fork:
 
 ## Versioning policy
 
-Chart and application versions are intentionally separate:
+Chart and application versions are published together from the same release tag:
 
-- `version` tracks chart package changes. Bump it for any chart content change, including templates, values, `Chart.yaml` metadata, README updates, or Artifact Hub annotations.
-- `appVersion` tracks the default Readability JS Server image version used by the chart.
+- `version` and `appVersion` must both equal the release tag without the `v` prefix.
+- A chart-only change still needs a new patch release, with both fields bumped together.
 
-When the chart changes without a new application release, only the chart `version` should move. When the default image tag changes, bump both the chart `version` and `appVersion`.
-
-Docker image publishing remains tag-driven from the root release workflow and follows the git tag. Helm chart publishing is separate: pushes to `master` that change `charts/**`, plus explicit manual workflow runs, publish the chart repository to GitHub Pages.
+One `vX.Y.Z` tag publishes the Docker image, the chart package and `index.yaml` on `gh-pages`, the Artifact Hub metadata, and the GitHub Release. Merging to `main` publishes nothing. A manual workflow dispatch republishes only the Artifact Hub metadata to `gh-pages`; it never builds an image or a chart package.
 
 ## Hosted repository and Artifact Hub
 
@@ -92,7 +90,7 @@ https://phpdocker-io.github.io/readability-js-server
 
 Artifact Hub should register that external Helm repository URL. It should not be pointed at GitHub Releases or at the source repository itself.
 
-Repository-level Artifact Hub metadata lives in `artifacthub-repo.yml`. The chart release workflow copies that file onto `gh-pages` so it is served next to `index.yaml`, which is the layout Artifact Hub expects for ownership claims and verified publisher metadata.
+Repository-level Artifact Hub metadata lives in `artifacthub-repo.yml`. The release workflow copies `artifacthub-repo.yml` and `.nojekyll` onto `gh-pages` next to `index.yaml`, which is the layout Artifact Hub expects for ownership claims and verified publisher metadata.
 
 ## Verification
 
