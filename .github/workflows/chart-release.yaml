@@ -2,11 +2,8 @@ name: Chart Release
 
 on:
   push:
-    branches: [ main ]
-    paths:
-      - .github/workflows/chart-release.yaml
-      - artifacthub-repo.yml
-      - charts/**
+    tags:
+      - "v*"
   workflow_dispatch:
 
 permissions:
