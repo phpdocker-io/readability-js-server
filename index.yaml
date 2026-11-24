@@ -19,6 +19,45 @@ entries:
         - name: Luis Pabon
           email: luis.pabon@auronconsulting.co.uk
     apiVersion: v2
+    appVersion: 2.0.3
+    created: "2026-11-24T13:42:13.246750995Z"
+    description: A production-usable Helm chart for Readability JS Server
+    digest: 044f8ffdffa69dea187229aa92bf553d1b1af1f4ce576e91c0b09fae7833e180
+    home: https://github.com/phpdocker-io/readability-js-server
+    keywords:
+    - readability
+    - article-extraction
+    - express
+    - nodejs
+    maintainers:
+    - email: luis.pabon@auronconsulting.co.uk
+      name: Luis Pabon
+      url: https://github.com/luispabon
+    name: readability-js-server
+    sources:
+    - https://github.com/phpdocker-io/readability-js-server
+    type: application
+    urls:
+    - readability-js-server-2.0.3.tgz
+    version: 2.0.3
+  - annotations:
+      artifacthub.io/changes: |
+        - kind: added
+          description: Publish chart packages and index.yaml to the GitHub Pages Helm repository.
+        - kind: added
+          description: Add Artifact Hub repository metadata and installation guidance for the hosted chart repository.
+      artifacthub.io/license: Apache-2.0
+      artifacthub.io/links: |
+        - name: source
+          url: https://github.com/phpdocker-io/readability-js-server
+        - name: support
+          url: https://github.com/phpdocker-io/readability-js-server/issues
+        - name: chart repository
+          url: https://phpdocker-io.github.io/readability-js-server
+      artifacthub.io/maintainers: |
+        - name: Luis Pabon
+          email: luis.pabon@auronconsulting.co.uk
+    apiVersion: v2
     appVersion: 1.8.0
     created: "2026-06-17T17:05:01.412637321Z"
     description: A production-usable Helm chart for Readability JS Server
@@ -40,4 +79,4 @@ entries:
     urls:
     - readability-js-server-0.1.0.tgz
     version: 0.1.0
-generated: "2026-06-17T17:05:01.412642889Z"
+generated: "2026-11-24T13:42:13.246756704Z"
