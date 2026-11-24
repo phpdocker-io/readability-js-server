@@ -27,5 +27,10 @@
     "nodemon": "^3.1.14",
     "prettier": "^3.10.1",
     "supertest": "^7.3.2"
+  },
+  "overrides": {
+    "nodemon": {
+      "minimatch": "^11.0.9"
+    }
   }
 }
