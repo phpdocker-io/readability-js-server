@@ -14,7 +14,7 @@ env:
 
 jobs:
   verify:
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -40,9 +40,10 @@ jobs:
           version="${tag#v}"
           IFS='.' read -r major minor _patch <<< "${version}"
 
+          tag_commit="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
           git fetch --no-tags origin main
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
-            echo "Tag commit ${GITHUB_SHA} is not on main" >&2
+          if ! git merge-base --is-ancestor "${tag_commit}" origin/main; then
+            echo "Tag commit ${tag_commit} is not on main" >&2
             exit 1
           fi
 
@@ -87,7 +88,7 @@ jobs:
 
   image:
     needs: verify
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -124,7 +125,7 @@ jobs:
 
   chart:
     needs: [image, verify]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -140,19 +141,6 @@ jobs:
         with:
           version: v3.16.3
 
-      - name: Package chart
-        id: package
-        env:
-          VERSION: ${{ needs.verify.outputs.version }}
-        run: |
-          set -euo pipefail
-          workdir="${RUNNER_TEMP}/chart-package"
-          rm -rf "${workdir}"
-          mkdir -p "${workdir}"
-          helm package charts/readability-js-server -d "${workdir}"
-          test -f "${workdir}/readability-js-server-${VERSION}.tgz"
-          echo "workdir=${workdir}" >> "${GITHUB_OUTPUT}"
-
       - name: Clone gh-pages
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -166,22 +154,32 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VERSION: ${{ needs.verify.outputs.version }}
-          PACKAGE_DIR: ${{ steps.package.outputs.workdir }}
           GH_PAGES: ${{ runner.temp }}/gh-pages
         run: |
           set -euo pipefail
-          if grep -Eq "^[[:space:]]+version:[[:space:]]+${VERSION}$" "${GH_PAGES}/index.yaml"; then
-            echo "Chart ${VERSION} is already in index.yaml; skipping package publication"
+          index_file="${GH_PAGES}/index.yaml"
+          if [ ! -f "${index_file}" ]; then
+            echo "gh-pages/index.yaml is missing; cannot publish the Helm repository" >&2
+            exit 1
+          fi
+
+          if awk -v want="${VERSION}" '$1 == "version:" && $2 == want { found = 1 } END { exit found ? 0 : 1 }' "${index_file}"; then
+            echo "Chart ${VERSION} is already in index.yaml; skipping packaging and publication"
           else
-            helm repo index "${PACKAGE_DIR}" --merge "${GH_PAGES}/index.yaml"
-            install -m 0644 "${PACKAGE_DIR}/readability-js-server-${VERSION}.tgz" "${GH_PAGES}/readability-js-server-${VERSION}.tgz"
-            install -m 0644 "${PACKAGE_DIR}/index.yaml" "${GH_PAGES}/index.yaml"
+            package_dir="${RUNNER_TEMP}/chart-package"
+            rm -rf "${package_dir}"
+            mkdir -p "${package_dir}"
+            helm package charts/readability-js-server -d "${package_dir}"
+            test -f "${package_dir}/readability-js-server-${VERSION}.tgz"
+            helm repo index "${package_dir}" --merge "${index_file}"
+            install -m 0644 "${package_dir}/readability-js-server-${VERSION}.tgz" "${GH_PAGES}/readability-js-server-${VERSION}.tgz"
+            install -m 0644 "${package_dir}/index.yaml" "${index_file}"
           fi
           ./.github/scripts/publish-gh-pages.sh "${GH_PAGES}" "Publish Helm chart ${VERSION}"
 
   release:
     needs: chart
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: write
