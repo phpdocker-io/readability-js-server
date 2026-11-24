@@ -138,7 +138,7 @@ make install
 make start
 ```
 
-Release versions come from the git tag (`vX.Y.Z`). To publish a release, create a `vX.Y.Z` tag and push it. The release workflow publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, and creates the matching GitHub Release with generated notes.
+Release versions come from the git tag (`vX.Y.Z`). Pushing one tag publishes Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`, the Helm chart on `gh-pages`, the Artifact Hub metadata, and the GitHub Release with generated notes. Nothing publishes when a change merges to `main`.
 
 ## Helm chart
 
@@ -158,15 +158,23 @@ Artifact Hub should reference the external Helm repository URL `https://phpdocke
 
 ## Release and versioning
 
-Docker image publishing remains tag-driven. Create the matching `vX.Y.Z` tag and push it to publish the container image and GitHub Release.
+Publishing runs from a single workflow triggered by one strict `vX.Y.Z` tag (`^v[0-9]+\.[0-9]+\.[0-9]+$`, no pre-release suffixes). The tag commit must be on `main`, and `charts/readability-js-server/Chart.yaml` `version` and `appVersion` must both equal the tag without the `v` prefix.
 
-Helm chart publishing is separate and runs from chart changes on `master` or an explicit manual trigger. It packages changed charts from `charts/`, updates the GitHub Pages repository on `gh-pages`, and publishes `artifacthub-repo.yml` next to `index.yaml` for Artifact Hub.
+Pushing the tag publishes, in order:
+
+- Docker images for `X.Y.Z`, `X.Y`, `X`, and `latest`.
+- The Helm chart package and `index.yaml` on `gh-pages`.
+- The Artifact Hub metadata (`artifacthub-repo.yml` and `.nojekyll`) on `gh-pages`.
+- The GitHub Release with generated notes.
+
+Merging to `main` publishes nothing. A manual `workflow_dispatch` run of the release workflow republishes only the Artifact Hub metadata to `gh-pages`; it never builds an image or a chart package.
+
+`make release-tag VERSION=X.Y.Z` only creates the tag. It refuses to run unless the working tree is clean, `HEAD` matches `origin/main`, `VERSION` is a strict `MAJOR.MINOR.PATCH` value, and `Chart.yaml` `version` and `appVersion` already match. Push the tag to publish.
 
 For the chart itself:
 
-- Bump `charts/readability-js-server/Chart.yaml` `version` for any chart package change, including templates, defaults, README content, metadata, or publishing annotations.
-- Bump `appVersion` only when the chart's default application image tag changes.
-- When the default application image tag changes, bump both `version` and `appVersion`.
+- `version` and `appVersion` move together, and both equal the release tag without the `v` prefix.
+- A chart-only change still needs a new patch tag, with both `Chart.yaml` fields bumped.
 
 ## Testing
 
@@ -219,7 +227,7 @@ docker run --rm -p 3000:3000 readability-js
 
 The image is based on `node:24-alpine`, installs production dependencies only, and runs the service as a non-root user.
 
-CI on pull requests and pushes to `master` runs lint, tests, and Helm chart verification. Container publishing happens from the tag-triggered release workflow.
+CI on pull requests and pushes to `main` runs lint, tests, Helm chart verification, and an amd64 container build. Publishing happens only from the tag-triggered release workflow.
 
 For Docker Compose setup, see [`examples/compose.yaml`](examples/compose.yaml). That example publishes port `3000` and checks `GET /healthz` from inside the container using the `node` runtime that ships in the published image.
 

@@ -22,7 +22,7 @@
 
 The Makefile mirrors those workflows with `make install`, `make start`, `make lint`, `make lint-fix`, `make helm-lint`, `make helm-template`, `make helm-verify`, `make build-container`, `make run-container`, `make release-tag`, and `make example-request`.
 
-Release publishing is tag-driven: create a matching `vX.Y.Z` git tag and push it to trigger Docker publish plus GitHub Release creation. The service version is no longer stored in `package.json`.
+Release publishing is tag-driven. Pushing one strict `vX.Y.Z` tag runs a single workflow that publishes, in order: Docker images, the Helm chart package and `index.yaml` on `gh-pages`, the Artifact Hub metadata (`artifacthub-repo.yml` and `.nojekyll`), then the GitHub Release with generated notes. The tag commit must be on `main`, and `charts/readability-js-server/Chart.yaml` `version` and `appVersion` must both equal the tag without the `v` prefix. Merging to `main` publishes nothing. A manual `workflow_dispatch` run republishes only the Artifact Hub metadata to `gh-pages`. The service version is no longer stored in `package.json`.
 
 ## Testing expectations
 

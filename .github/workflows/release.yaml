@@ -4,20 +4,97 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  IMAGE_NAME: phpdockerio/readability-js-server
 
 jobs:
-  publish:
+  verify:
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
-      contents: write
-    env:
-      IMAGE_NAME: phpdockerio/readability-js-server
-
+      contents: read
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      major: ${{ steps.meta.outputs.major }}
+      minor: ${{ steps.meta.outputs.minor }}
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+
+      - name: Validate tag and chart versions
+        id: meta
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          if ! printf '%s' "${tag}" | grep -Eq '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag ${tag} must match vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          version="${tag#v}"
+          IFS='.' read -r major minor _patch <<< "${version}"
+
+          tag_commit="$(git rev-parse "${GITHUB_REF_NAME}^{commit}")"
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "${tag_commit}" origin/main; then
+            echo "Tag commit ${tag_commit} is not on main" >&2
+            exit 1
+          fi
+
+          chart_file="charts/readability-js-server/Chart.yaml"
+          chart_version="$(awk '$1 == "version:" { print $2; exit }' "${chart_file}")"
+          chart_app_version="$(awk '$1 == "appVersion:" { print $2; exit }' "${chart_file}" | tr -d '"')"
+          if [ "${chart_version}" != "${version}" ] || [ "${chart_app_version}" != "${version}" ]; then
+            echo "Chart.yaml version (${chart_version}) and appVersion (${chart_app_version}) must both equal ${version}" >&2
+            exit 1
+          fi
+          {
+            echo "version=${version}"
+            echo "major=${major}"
+            echo "minor=${minor}"
+          } >> "${GITHUB_OUTPUT}"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Helm lint
+        run: make helm-lint
+
+      - name: Helm template
+        run: make helm-template
+
+  image:
+    needs: verify
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -25,49 +102,123 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v4
 
-      - name: Derive release metadata
-        id: meta
-        run: |
-          TAG_NAME="${GITHUB_REF_NAME}"
-          VERSION="${TAG_NAME#v}"
-
-          if [ "${VERSION}" = "${TAG_NAME}" ]; then
-            echo "Tag must start with v" >&2
-            exit 1
-          fi
-
-          IFS='.' read -r MAJOR MINOR PATCH <<EOF
-          ${VERSION}
-          EOF
-
-          if [ -z "${MAJOR}" ] || [ -z "${MINOR}" ] || [ -z "${PATCH}" ]; then
-            echo "Tag must be in vMAJOR.MINOR.PATCH format" >&2
-            exit 1
-          fi
-
-          {
-            echo "version=${VERSION}"
-            echo "major=${MAJOR}"
-            echo "minor=${MINOR}"
-            echo "tags=${IMAGE_NAME}:latest,${IMAGE_NAME}:${VERSION},${IMAGE_NAME}:${MAJOR}.${MINOR},${IMAGE_NAME}:${MAJOR}"
-          } >> "${GITHUB_OUTPUT}"
-
-      - name: Login to DockerHub
+      - name: Login to Docker Hub
         uses: docker/login-action@v4
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build & push container image
+      - name: Build and push container image
         uses: docker/build-push-action@v7
         with:
           context: .
           platforms: linux/amd64,linux/arm64
           pull: true
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
+            ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.major }}.${{ needs.verify.outputs.minor }}
+            ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.major }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
+  chart:
+    needs: [image, verify]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gh-pages-publish
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.16.3
+
+      - name: Clone gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --branch gh-pages --single-branch \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "${RUNNER_TEMP}/gh-pages"
+
+      - name: Publish chart to gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ needs.verify.outputs.version }}
+          GH_PAGES: ${{ runner.temp }}/gh-pages
+        run: |
+          set -euo pipefail
+          index_file="${GH_PAGES}/index.yaml"
+          if [ ! -f "${index_file}" ]; then
+            echo "gh-pages/index.yaml is missing; cannot publish the Helm repository" >&2
+            exit 1
+          fi
+
+          if awk -v want="${VERSION}" '$1 == "version:" && $2 == want { found = 1 } END { exit found ? 0 : 1 }' "${index_file}"; then
+            echo "Chart ${VERSION} is already in index.yaml; skipping packaging and publication"
+          else
+            package_dir="${RUNNER_TEMP}/chart-package"
+            rm -rf "${package_dir}"
+            mkdir -p "${package_dir}"
+            helm package charts/readability-js-server -d "${package_dir}"
+            test -f "${package_dir}/readability-js-server-${VERSION}.tgz"
+            helm repo index "${package_dir}" --merge "${index_file}"
+            install -m 0644 "${package_dir}/readability-js-server-${VERSION}.tgz" "${GH_PAGES}/readability-js-server-${VERSION}.tgz"
+            install -m 0644 "${package_dir}/index.yaml" "${index_file}"
+          fi
+          ./.github/scripts/publish-gh-pages.sh "${GH_PAGES}" "Publish Helm chart ${VERSION}"
+
+  release:
+    needs: chart
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
       - name: Create GitHub Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh release create "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            echo "Release ${GITHUB_REF_NAME} already exists; leaving it unchanged"
+          else
+            gh release create "${GITHUB_REF_NAME}" --generate-notes --verify-tag
+          fi
+
+  metadata:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: gh-pages-publish
+      cancel-in-progress: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Clone gh-pages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --branch gh-pages --single-branch \
+            "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" \
+            "${RUNNER_TEMP}/gh-pages"
+
+      - name: Publish Artifact Hub metadata
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_PAGES: ${{ runner.temp }}/gh-pages
+        run: ./.github/scripts/publish-gh-pages.sh "${GH_PAGES}" "Publish Artifact Hub repository metadata"

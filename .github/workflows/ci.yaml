@@ -43,3 +43,6 @@ jobs:
 
       - name: Helm template
         run: make helm-template
+
+      - name: Build container image
+        run: docker build --platform linux/amd64 -t readability-js:ci .
