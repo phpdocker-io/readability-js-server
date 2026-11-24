@@ -2,7 +2,7 @@ name: Chart Release
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
     paths:
       - .github/workflows/chart-release.yaml
       - artifacthub-repo.yml
